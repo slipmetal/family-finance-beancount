@@ -1,0 +1,47 @@
+# Образец списка счетов. Номера здесь вымышленные.
+#
+# Настоящий файл называется accounts.yaml и лежит рядом с леджером —
+# в приватном репозитории, а не здесь: номера счетов это личные данные.
+# Путь по умолчанию — ledger/accounts.yaml, переопределяется переменной
+# окружения FINANCE_ACCOUNTS.
+#
+#     cp accounts.example.yaml ledger/accounts.yaml
+#
+# Обязательные поля у каждой записи: bank, account, currency.
+# Дальше зависит от банка:
+#
+#   bank: ameria        marker — метка в имени файла выписки. В выписке
+#                       Ameriabank нет ни номера счёта, ни номера карты,
+#                       различить счета можно только по имени файла.
+#
+#   bank: acba-card     number — номер карточного счёта. Читается из .xls:
+#                       только там есть название мерчанта.
+#
+#   bank: acba-account  number — номер обычного счёта. Читается из .xml:
+#                       только там есть контрагент и номер операции.
+#
+# Валюта перепроверяется по содержимому файла: если метка или номер указывают
+# на счёт с другой валютой, файл не опознается — вместо того чтобы молча уехать
+# не на тот счёт.
+
+accounts:
+
+  - bank: ameria
+    account: Assets:Ameria:Card0001
+    currency: AMD
+    marker: card0001
+
+  - bank: ameria
+    account: Assets:Ameria:Rub
+    currency: RUB
+    marker: rub
+
+  - bank: acba-card
+    account: Assets:Acba:AmdCard
+    currency: AMD
+    number: "100000000000001"
+
+  - bank: acba-account
+    account: Assets:Acba:Amd
+    currency: AMD
+    number: "100000000000002"

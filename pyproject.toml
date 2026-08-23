@@ -1,0 +1,7 @@
+# Проект не пакетируется и не ставится через pip — зависимости живут
+# в requirements.txt. Здесь только настройки инструментов.
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# Чтобы `import finance...` работал из тестов без установки пакета.
+pythonpath = ["."]

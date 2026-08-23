@@ -1,0 +1,177 @@
+# Образец правил категоризации. Все имена, номера и мерчанты здесь вымышленные.
+#
+# Настоящий файл называется rules.yaml и лежит рядом с леджером — в приватном
+# репозитории, а не здесь: список мерчантов, фамилии контрагентов и номера
+# своих счетов это личные данные. Путь по умолчанию — ledger/rules.yaml,
+# переопределяется переменной окружения FINANCE_RULES.
+#
+#     cp rules.example.yaml ledger/rules.yaml
+#
+# Как это работает:
+#   * правила проверяются СВЕРХУ ВНИЗ, побеждает первое подошедшее — поэтому
+#     частные правила должны стоять выше общих (SAS DELIVERY выше просто SAS);
+#   * внутри `match` все указанные условия должны выполниться одновременно (AND);
+#   * `payee` подменяет имя контрагента, `narration` — описание, `tags` — теги;
+#     сырые значения при подмене уезжают в метаданные, ничего не теряется;
+#   * не подошло ни одно правило → default_account и флаг `!`, такие строки
+#     хорошо видно в fava: это и есть список того, что стоит дописать сюда.
+#
+# Поля для `match` — регулярки (re.search):
+#   text          склейка counterparty, details и type. ИСПОЛЬЗУЙТЕ ЕГО ДЛЯ
+#                 МЕРЧАНТОВ: Ameriabank кладёт название магазина в описание,
+#                 ACBA — в «место операции», и одно правило на `text`
+#                 покрывает оба. Регулярка применяется с re.MULTILINE, так что
+#                 `^` и `$` привязываются к границам отдельного поля.
+#   counterparty  контрагент (Ameriabank: Receiver/Sender; ACBA: CORRESPONDENTNAME
+#                 для счетов, «место операции» для карт)
+#   details       описание операции
+#   type          тип операции банка (ACBA-счета: TRF/CEX/FEE/MSC; карты: `card`;
+#                 Ameriabank: армянское название типа)
+#   correspondent номер счёта контрагента (только ACBA, в `text` НЕ входит)
+# И числовые: `sign` ('+' или '-'), `amount_min`, `amount_max` (ПО МОДУЛЮ суммы).
+#
+# Каждый счёт, упомянутый в правилах, должен быть открыт директивой `open`
+# в плане счетов леджера — иначе bean-check не пройдёт.
+
+default_account: Expenses:Uncategorized
+
+rules:
+
+  # ═══════════════════ Служебные операции банков ═══════════════════
+
+  - name: fee-transfer
+    match:
+      details: '^Ք: Գանձում փոխանցման համար'
+    account: Expenses:Fees:Bank:Transfer
+    payee: Ameriabank
+    narration: Комиссия за перевод
+
+  # У обычных счетов ACBA тип операции приходит кодом:
+  # TRF — перевод, CEX — обмен валюты, FEE — комиссия, MSC — прочее.
+  - name: acba-fee
+    match:
+      type: '^FEE$'
+    account: Expenses:Fees:Bank:Transfer
+    payee: ACBA Bank
+    narration: Комиссия за перевод
+
+  - name: acba-card-service-fee
+    match:
+      details: '^Card service fee$'
+    account: Expenses:Fees:Bank:Service
+    payee: ACBA Bank
+    narration: Плата за обслуживание карты
+
+  # ═══════════════════════════ Жильё ═══════════════════════════
+  # Арендодатель. Имя приходит в нескольких написаниях и с разных реквизитов,
+  # поэтому опознаём по фамилии, а не по номеру счёта. Матчим именно фамилию:
+  # у однофамильцев по имени операции разные.
+  #
+  # Оба правила обязаны стоять ВЫШЕ блока переводов: у переводов со счёта ACBA
+  # описание «Transfer to account», и общее правило увело бы аренду в транзит.
+
+  - name: rent
+    match:
+      text: '(?i)ivanov|Իվանով'
+      amount_min: 300000
+      amount_max: 300000
+    account: Expenses:Home:Rent
+    payee: Иванов
+    narration: Аренда квартиры
+
+  # Тот же получатель, любая другая сумма — коммунальные платежи.
+  - name: utilities-to-landlord
+    match:
+      text: '(?i)ivanov|Իվանով'
+    account: Expenses:Home:Utilities
+    payee: Иванов
+    narration: Коммунальные платежи
+
+  # ═══════════════════ Перемещения между своими счетами ═══════════════════
+  # Вторая нога уходит на транзитный счёт: в выписке видна только одна сторона
+  # операции. Тег #transit помогает найти их для ручной сверки.
+
+  - name: transfer-own-funds
+    match:
+      details: '^Transfer of own funds$'
+    account: Assets:Transfers:Pending
+    narration: Перевод собственных средств
+    tags: [transit]
+
+  - name: acba-currency-exchange
+    match:
+      type: '^CEX$'
+    account: Assets:Transfers:Pending
+    narration: Обмен валюты
+    tags: [transit]
+
+  # Перевод на любой другой свой счёт. Опознаём по номеру счёта контрагента,
+  # а не по имени владельца: имя в выписке пишется по-разному, а номер один и
+  # тот же. Список — те же счета, что заведены в плане счетов леджера.
+  - name: transfer-to-own-account
+    match:
+      correspondent: '^(100000000000001|100000000000002)$'
+    account: Assets:Transfers:Pending
+    narration: Перевод между своими счетами
+    tags: [transit]
+
+  # ═══════════════════════════ Наличные ═══════════════════════════
+
+  - name: atm
+    match:
+      details: '^Ք: ATM '
+    account: Assets:Cash
+    payee: ATM
+
+  - name: acba-cash-withdrawal
+    match:
+      details: '^Cash Withdrawal$'
+    account: Assets:Cash
+    payee: ATM
+
+  # ═══════════════════════════ Доходы ═══════════════════════════
+
+  - name: gov-cashback
+    match:
+      details: '^\d{4}-\d{2} անկանխիկ'
+    account: Income:Cashback:Government
+    narration: Государственный кешбэк за безналичные платежи
+
+  # Пополнение счёта извне: выписки того счёта в леджере нет, поэтому вторая
+  # нога — внешний счёт, а не транзитный. Транзитный обязан сходиться в ноль,
+  # а этому сходиться не с чем.
+  - name: incoming-external
+    match:
+      details: '^PEREVOD SOBSTVENNYH SREDSTV'
+    account: Assets:External:Other
+    narration: Пополнение счёта
+    tags: [external]
+
+  # ═══════════════════════════ Мерчанты ═══════════════════════════
+  # Дальше идут правила по названиям магазинов и сервисов. Здесь их три для
+  # примера — в настоящем файле их столько, сколько нужно, чтобы доля
+  # Expenses:Uncategorized стала приемлемой.
+
+  - name: delivery
+    match:
+      text: '\bGLOVO\b'
+    account: Expenses:Food:Delivery
+    payee: Glovo
+
+  # \b не даст зацепить SASUN GULKANYAN.
+  - name: groceries
+    match:
+      text: '\bSAS\b'
+    account: Expenses:Food:Groceries
+    payee: SAS
+
+  - name: taxi
+    match:
+      text: '\bYANDEX\.? ?GO\b'
+    account: Expenses:Transport:Taxi
+    payee: Yandex Go
+
+  # Переводы физлицам сознательно НЕ категоризируются: по выписке нельзя понять,
+  # что это было — долг, подарок или делёж счёта. Они попадут в
+  # Expenses:Uncategorized с флагом `!`. Если у конкретного получателя смысл
+  # всегда один, добавьте правило по образцу блока «Жильё» выше.

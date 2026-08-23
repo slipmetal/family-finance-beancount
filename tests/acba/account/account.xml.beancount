@@ -1,0 +1,68 @@
+;; Account: Assets:Acba:Amd
+;; Date: 2026-08-21
+;; Name: acba-amd-account.xml
+
+2026-01-01 * "Անուն Երկու" "Перевод со своего счёта" #transit
+  acba-id: "100000000000011:400000000001-1"
+  bank-type: "TRF"
+  correspondent: "200000000000001"
+  details: "Transfer to account (մոբայլ բանկինգ 100000000)"
+  Assets:Acba:Amd           -300000.00 AMD
+  Assets:Transfers:Pending
+
+2026-01-04 * "Անուն Ազգանուն" "Обмен валюты" #transit
+  acba-id: "100000000000011:400000000002-1"
+  bank-type: "CEX"
+  correspondent: "100000000000003"
+  details: "Արժ. վաճառք EUR Անուն Ազգանուն (մոբայլ բանկինգ 100000000)"
+  Assets:Acba:Amd           -39302.00 AMD
+  Assets:Transfers:Pending
+
+2026-01-11 * "Անուն Ազգանուն" "Перевод между своими счетами" #transit
+  acba-id: "100000000000011:400000000003-1"
+  bank-type: "TRF"
+  correspondent: "100000000000001"
+  details: "Փոխանցում հաշվին (մոբայլ բանկինգ 100000000)"
+  Assets:Acba:Amd           -71018.00 AMD
+  Assets:Transfers:Pending
+
+2026-01-11 * "Անուն Ազգանուն" "Обмен валюты" #transit
+  acba-id: "100000000000011:400000000004-1"
+  bank-type: "CEX"
+  correspondent: "100000000000002"
+  details: "Արժ. վաճառք USD Անուն Ազգանուն (մոբայլ բանկինգ 100000000)"
+  Assets:Acba:Amd           -8809.00 AMD
+  Assets:Transfers:Pending
+
+2026-01-12 ! "ORGANIZATION ONE" "1000000000 Firstname Lastname (մոբայլ բանկինգ 100000000)"
+  acba-id: "100000000000011:400000000005-1"
+  bank-type: "TRF"
+  correspondent: "200000000000002"
+  Assets:Acba:Amd         -30000.00 AMD
+  Expenses:Uncategorized
+
+2026-01-12 * "ACBA Bank" "Комиссия за перевод"
+  acba-id: "100000000000011:400000000005-2"
+  bank-type: "FEE"
+  correspondent: "200000000000003"
+  details: "Կոմիսիոն 30000.00 AMD փոխանցելու համար"
+  Assets:Acba:Amd              -100.00 AMD
+  Expenses:Fees:Bank:Transfer
+
+2026-02-04 * "ONEX" "Доставка посылок"
+  acba-id: "100000000000011:400000000006-1"
+  bank-type: "MSC"
+  correspondent: "200000000000004"
+  counterparty: "«ԹԵԼ-ՍԵԼ» ԲԲԸ"
+  details: "ONEX (մոբայլ բանկինգ 100000000)"
+  Assets:Acba:Amd             -5400.00 AMD
+  Expenses:Shopping:Delivery
+
+2026-03-24 * "ONEX" "Доставка посылок"
+  acba-id: "100000000000011:400000000007-1"
+  bank-type: "MSC"
+  correspondent: "200000000000004"
+  counterparty: "«ԹԵԼ-ՍԵԼ» ԲԲԸ"
+  details: "ONEX (մոբայլ բանկինգ 100000000)"
+  Assets:Acba:Amd             -5000.00 AMD
+  Expenses:Shopping:Delivery
