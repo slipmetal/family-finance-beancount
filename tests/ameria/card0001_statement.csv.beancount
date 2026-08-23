@@ -1,0 +1,231 @@
+;; Account: Assets:Ameria:Card0001
+;; Date: 2026-05-22
+;; Name: ameria.csv
+
+2026-01-17 * "Apple" "APPLE.COM/BILL CORK 605151"
+  time: "00:00"
+  bank-type: "Քարտային գործարք"
+  settlement: 2026-01-21
+  original: "-3.49 USD"
+  counterparty: "Master Card AMD"
+  details: "Ք: APPLE.COM/BILL CORK 605151"
+  Assets:Ameria:Card0001  -1329.69 AMD
+  Expenses:Subscriptions
+
+2026-01-19 * "Firstname Lastname" "Пополнение под плату за обслуживание" #transit
+  time: "14:12"
+  bank-type: "Արտարժույթի փոխանակում"
+  details: "Սպասարկման վարձի վճարում"
+  Assets:Ameria:Card0001    2500.00 AMD
+  Assets:Transfers:Pending
+
+2026-01-19 * "Ameriabank" "Плата за обслуживание счёта"
+  time: "14:12"
+  bank-type: "Գանձում"
+  counterparty: "Միջն./706/Քարտային գործարքների գծով"
+  details: "Սպասարկման վարձի վճարում"
+  Assets:Ameria:Card0001      -2500.00 AMD
+  Expenses:Fees:Bank:Service
+
+2026-01-23 * "Firstname Lastname" "Перевод собственных средств" #transit
+  time: "17:38"
+  bank-type: "Փոխանցում հաշվին"
+  details: "Transfer of own funds"
+  Assets:Ameria:Card0001    5000.00 AMD
+  Assets:Transfers:Pending
+
+2026-01-23 * "Yerevan City" "YEREVAN-CITY.\\Epos Purcha YEREV"
+  time: "17:41"
+  bank-type: "Քարտային գործարք"
+  settlement: 2026-01-26
+  counterparty: "Արմենիան Քարդ/փոխհաշվարկներ"
+  details: "Ք: YEREVAN-CITY.\\Epos Purcha YEREV"
+  Assets:Ameria:Card0001   -10.00 AMD
+  Expenses:Food:Groceries
+
+2026-01-26 * "Ameriabank" "Комиссия за SMS-уведомления"
+  time: "11:39"
+  bank-type: "Քարտային գործարք"
+  counterparty: "Տարանցիկ հաշիվ/Քարտերի միջն.SMS-ի համար/ARCA"
+  details: "Գանձում 1 SMS-ի համար Ամերիաբանկ Փ"
+  Assets:Ameria:Card0001  -15.00 AMD
+  Expenses:Fees:Bank:SMS
+
+2026-01-26 * "Ameriabank" "Комиссия за SMS-уведомления"
+  time: "11:39"
+  bank-type: "Քարտային գործարք"
+  counterparty: "Տարանցիկ հաշիվ/Քարտերի միջն.SMS-ի համար/ARCA"
+  details: "Գանձում 1 SMS-ի համար Ամերիաբանկ Փ"
+  Assets:Ameria:Card0001  -15.00 AMD
+  Expenses:Fees:Bank:SMS
+
+2026-01-30 * "«911 ՖԱՐՄ» ՍՊԸ" "911 PHARM LLC YEREVAN AM 544538"
+  time: "10:10"
+  bank-type: "Քարտային գործարք"
+  settlement: 2026-02-02
+  details: "Ք: 911 PHARM LLC YEREVAN AM 544538"
+  Assets:Ameria:Card0001    -29700.00 AMD
+  Expenses:Health:Pharmacy
+
+2026-01-31 * "Yandex Eats" "YANDEX EATS AM LLC YEREVAN AM 3"
+  time: "19:32"
+  bank-type: "Քարտային գործարք"
+  settlement: 2026-02-02
+  counterparty: "«ՈՒ.ՍՆՈՒՆԴ ԷՅԷՄ» ՍՊԸ"
+  details: "Ք: YANDEX EATS AM LLC YEREVAN AM 3"
+  Assets:Ameria:Card0001  -5247.00 AMD
+  Expenses:Food:Delivery
+
+2026-02-01 * "Jur.am" "JUR.AM APP. YEREVAN AM 881525"
+  time: "09:47"
+  bank-type: "Քարտային գործարք"
+  settlement: 2026-02-02
+  counterparty: "«ԷՎՐԻ ԴԵՅ» ՓԲԸ"
+  details: "Ք: JUR.AM APP. YEREVAN AM 881525"
+  Assets:Ameria:Card0001  -3600.00 AMD
+  Expenses:Food:Water
+
+2026-02-01 * "Yandex Go" "YANDEX. GO YEREVAN AM 180727"
+  time: "14:55"
+  bank-type: "Քարտային գործարք"
+  settlement: 2026-02-02
+  counterparty: "«ՐԱՅԴԹԵՔ ԷՅ ԷՄ» ՍՊԸ"
+  details: "Ք: YANDEX. GO YEREVAN AM 180727"
+  Assets:Ameria:Card0001   -1700.00 AMD
+  Expenses:Transport:Taxi
+
+2026-02-09 * "Card-to-card" "Քարտից քարտ փոխանցում ID BANK C" #transit
+  time: "19:35"
+  bank-type: "Քարտային գործարք"
+  counterparty: "Արմենիան Քարդ/փոխհաշվարկներ"
+  details: "Ք: Քարտից քարտ փոխանցում ID BANK C"
+  Assets:Ameria:Card0001    98000.00 AMD
+  Assets:Transfers:Pending
+
+2026-02-14 * "Ucom" "Интернет и связь"
+  time: "18:17"
+  bank-type: "Փոխանցում հաշվին"
+  counterparty: "Ակնթարթային ՄայԱմերիա"
+  details: "Ucom Payment: 000000000 / 000000000000"
+  Assets:Ameria:Card0001       -6000.00 AMD
+  Expenses:Utilities:Internet
+
+2026-02-18 * "Արմենիան Քարդ/փոխհաշվարկներ" "SOYAKIM AM\\Epos Purchase YEREVA"
+  time: "15:36"
+  bank-type: "Քարտային գործարք"
+  settlement: 2026-02-19
+  details: "Ք: SOYAKIM AM\\Epos Purchase YEREVA"
+  Assets:Ameria:Card0001  -10950.00 AMD
+  Expenses:Shopping
+
+2026-02-23 ! "Firstname Lastname" "Personal transfer"
+  time: "21:43"
+  bank-type: "Փոխանցում հաշվին"
+  Assets:Ameria:Card0001  -10000.00 AMD
+  Expenses:Uncategorized
+
+2026-02-24 * "Ameriabank" "Комиссия за перевод"
+  time: "05:48"
+  bank-type: "Քարտային գործարք"
+  counterparty: "Միջն./100/Քարտային գործարքների գծով"
+  details: "Ք: Գանձում փոխանցման համար Ամերիաբ"
+  Assets:Ameria:Card0001       -30.00 AMD
+  Expenses:Fees:Bank:Transfer
+
+2026-02-24 * "ATM" "ATM 335 MASHTOTS 20/4,YEREVAN,M"
+  time: "20:25"
+  bank-type: "Քարտային գործարք"
+  counterparty: "Արմենիան Քարդ/փոխհաշվարկներ"
+  details: "Ք: ATM 335 MASHTOTS 20/4,YEREVAN,M"
+  Assets:Ameria:Card0001  129000.00 AMD
+  Assets:Cash
+
+2026-02-25 * "ԱՐՔԱ քարտերի գծով պետական հետվճարի միջանկյալ հաշիվ" "Государственный кешбэк за безналичные платежи"
+  time: "10:14"
+  bank-type: "Քարտային գործարք"
+  details: "2026-01 անկանխիկ վճ.-ից հետվճար"
+  Assets:Ameria:Card0001      2026.00 AMD
+  Income:Cashback:Government
+
+2026-03-09 * "SAS" "SAS\\Epos Return or Refund YEREV"
+  time: "23:31"
+  bank-type: "Քարտային գործարք"
+  settlement: 2026-03-10
+  counterparty: "Արմենիան Քարդ/փոխհաշվարկներ"
+  details: "Ք: SAS\\Epos Return or Refund YEREV"
+  Assets:Ameria:Card0001   1575.00 AMD
+  Expenses:Food:Groceries
+
+2026-03-19 * "Glovo" "GLOVO APP YEREVAN AM 696934"
+  time: "16:24"
+  bank-type: "Քարտային գործարք"
+  settlement: 2026-03-20
+  counterparty: "«ԳԼՈՎՈ» ՍՊԸ"
+  details: "Ք: GLOVO APP YEREVAN AM 696934"
+  Assets:Ameria:Card0001  -44199.60 AMD
+  Expenses:Food:Delivery
+
+2026-03-27 * "ONEX" "Доставка посылок"
+  time: "15:14"
+  bank-type: "Փոխանցում հաշվին"
+  counterparty: "Ակնթարթային ՄայԱմերիա"
+  details: "ONEX Payment: ARM000000 / 000000000000"
+  Assets:Ameria:Card0001      -10000.00 AMD
+  Expenses:Shopping:Delivery
+
+2026-03-29 * "«ԴՅՈՒՑԱԶՆ» ՍՊԸ" "INVITRO YEREVAN AM 105329"
+  time: "12:47"
+  bank-type: "Քարտային գործարք"
+  settlement: 2026-03-30
+  details: "Ք: INVITRO YEREVAN AM 105329"
+  Assets:Ameria:Card0001   -41600.00 AMD
+  Expenses:Health:Medical
+
+2026-04-11 * "Արմենիան Քարդ/փոխհաշվարկներ" "JERMUK HOTEL\\Purchase POS JERMU"
+  time: "15:22"
+  bank-type: "Քարտային գործարք"
+  settlement: 2026-04-13
+  details: "Ք: JERMUK HOTEL\\Purchase POS JERMU"
+  Assets:Ameria:Card0001  -630000.00 AMD
+  Expenses:Travel
+
+2026-04-13 * "Account Owner" "Перевод со своего счёта" #transit
+  time: "12:53"
+  bank-type: "Փոխանցում հաշվին"
+  details: "Transfer to account (մոբայլ բանկինգ 100000000)"
+  Assets:Ameria:Card0001    80000.00 AMD
+  Assets:Transfers:Pending
+
+2026-04-24 * "SAS" "SAS YEREVAN AM 578094"
+  time: "13:32"
+  bank-type: "Քարտային գործարք"
+  settlement: 2026-04-27
+  counterparty: "Արմենիան Քարդ/փոխհաշվարկներ"
+  details: "Ք: SAS YEREVAN AM 578094"
+  Assets:Ameria:Card0001   -15297.00 AMD
+  Expenses:Food:Groceries
+
+2026-04-25 * "ԹԻ ԷՅ ՍԻՍԹԵՄՍ ՍՊԸ" "CINEMA STAR YEREVAN AM 830762"
+  time: "14:54"
+  bank-type: "Քարտային գործարք"
+  settlement: 2026-04-27
+  details: "Ք: CINEMA STAR YEREVAN AM 830762"
+  Assets:Ameria:Card0001  -20000.00 AMD
+  Expenses:Entertainment
+
+2026-05-05 * "SAS Delivery" "SAS DELIVERY 15 Yerevan AM 1343"
+  time: "22:13"
+  bank-type: "Քարտային գործարք"
+  settlement: 2026-05-06
+  counterparty: "Արմենիան Քարդ/փոխհաշվարկներ"
+  details: "Ք: SAS DELIVERY 15 Yerevan AM 1343"
+  Assets:Ameria:Card0001  -58499.00 AMD
+  Expenses:Food:Delivery
+
+2026-05-22 ! "ԱՆՀԱՏ ՁԵՌՆԱՐԿԱՏԵՐ ԱՁ" "SASUN SURNAME IE Yerevan AM 3"
+  time: "15:10"
+  bank-type: "Քարտային գործարք"
+  settlement: 2026-05-25
+  details: "Ք: SASUN SURNAME IE Yerevan AM 3"
+  Assets:Ameria:Card0001  -15000.00 AMD
+  Expenses:Uncategorized

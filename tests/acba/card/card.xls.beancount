@@ -1,0 +1,71 @@
+;; Account: Assets:Acba:AmdCard
+;; Date: 2026-08-21
+;; Name: acba-amd-card.xls
+
+2026-01-01 * "ACBA Bank" "Плата за обслуживание карты"
+  settlement: "01.01.26"
+  details: "Card service fee"
+  Assets:Acba:AmdCard         -400.00 AMD
+  Expenses:Fees:Bank:Service
+
+2026-01-10 * "Перевод между своими счетами" #transit
+  settlement: "10.01.26"
+  details: "Debit from card account"
+  Assets:Acba:AmdCard       -2000.00 AMD
+  Assets:Transfers:Pending
+
+2026-01-10 * "Glovo" "Electronic payment"
+  settlement: "12.01.26"
+  counterparty: "GLOVO APP"
+  Assets:Acba:AmdCard     -4996.10 AMD
+  Expenses:Food:Delivery
+
+2026-01-10 * "Yandex Go" "Electronic payment"
+  settlement: "12.01.26"
+  counterparty: "YANDEX.GO"
+  Assets:Acba:AmdCard      -3500.00 AMD
+  Expenses:Transport:Taxi
+
+2026-01-11 * "Yerevan City" "Reversal  1000000"
+  settlement: "13.01.26"
+  counterparty: "YEREVAN-CITY.AM"
+  Assets:Acba:AmdCard      845.30 AMD
+  Expenses:Food:Groceries
+
+2026-01-11 * "Перевод между своими счетами" #transit
+  settlement: "11.01.26"
+  details: "Transfer"
+  Assets:Acba:AmdCard       71018.00 AMD
+  Assets:Transfers:Pending
+
+2026-01-12 * "MG SHINARARNER" "Purchase"
+  settlement: "13.01.26"
+  card: "4000XXXXXXXX0002"
+  Assets:Acba:AmdCard      -5450.00 AMD
+  Expenses:Food:Groceries
+
+2026-01-12 * "ATM" "Cash Withdrawal"
+  settlement: "13.01.26"
+  counterparty: "ATM ACBA MG SHINARARNER N"
+  Assets:Acba:AmdCard  -4000.00 AMD
+  Assets:Cash
+
+2026-01-13 ! "ACBA BANK" "Card to card transfer, PERSON SIX, FIRSTNAME LASTNAME, 5555********0001"
+  settlement: "14.01.26"
+  Assets:Acba:AmdCard      -12864.00 AMD
+  Expenses:Fees:Bank:Card      64.00 AMD
+  Expenses:Uncategorized
+
+2026-01-15 * "Перевод между своими счетами" #transit
+  settlement: "15.01.26"
+  details: "Credit to card account"
+  Assets:Acba:AmdCard       23900.00 AMD
+  Assets:Transfers:Pending
+
+2026-01-25 ! "ACBA BANK" "Card to card transfer, PERSON SEVEN, FIRSTNAME LASTNAME, 5555********0002"
+  settlement: "26.01.26"
+  Assets:Acba:AmdCard      -10050.00 AMD
+  Expenses:Fees:Bank:Card      50.00 AMD
+  Expenses:Uncategorized
+
+2026-08-22 balance Assets:Acba:AmdCard                             20000.00 AMD

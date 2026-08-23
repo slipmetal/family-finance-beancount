@@ -1,0 +1,227 @@
+# Правила для тестов. Боевой rules.yaml лежит рядом с леджером, в приватном
+# репозитории, и в тестах не участвует: иначе правка правил ломала бы эталонные
+# файлы, а личные данные попадали бы в репозиторий через них.
+#
+# Здесь ровно то, что нужно фикстурам из tests/acba и tests/ameria. Номера
+# счетов — те же заглушки, что и в фикстурах (свои начинаются на 1000).
+# Формат и его возможности описаны в rules.example.yaml.
+
+default_account: Expenses:Uncategorized
+
+rules:
+
+  # ─────────────────────── служебные операции банков ───────────────────────
+
+  - name: fee-transfer
+    match:
+      details: '^Ք: Գանձում փոխանցման համար'
+    account: Expenses:Fees:Bank:Transfer
+    payee: Ameriabank
+    narration: Комиссия за перевод
+
+  - name: fee-sms
+    match:
+      details: 'SMS-ի համար'
+    account: Expenses:Fees:Bank:SMS
+    payee: Ameriabank
+    narration: Комиссия за SMS-уведомления
+
+  - name: fee-service
+    match:
+      details: '^Սպասարկման վարձի վճարում$'
+      sign: '-'
+    account: Expenses:Fees:Bank:Service
+    payee: Ameriabank
+    narration: Плата за обслуживание счёта
+
+  - name: acba-fee
+    match:
+      type: '^FEE$'
+    account: Expenses:Fees:Bank:Transfer
+    payee: ACBA Bank
+    narration: Комиссия за перевод
+
+  - name: acba-card-service-fee
+    match:
+      details: '^Card service fee$'
+    account: Expenses:Fees:Bank:Service
+    payee: ACBA Bank
+    narration: Плата за обслуживание карты
+
+  # ──────────────────── перемещения между своими счетами ────────────────────
+
+  - name: transfer-own-funds
+    match:
+      details: '^Transfer of own funds$'
+    account: Assets:Transfers:Pending
+    narration: Перевод собственных средств
+    tags: [transit]
+
+  - name: transfer-own-account
+    match:
+      details: '^Transfer to account'
+    account: Assets:Transfers:Pending
+    narration: Перевод со своего счёта
+    tags: [transit]
+
+  - name: transfer-card-to-card
+    match:
+      details: '^Ք: Քարտից քարտ փոխանցում'
+    account: Assets:Transfers:Pending
+    payee: Card-to-card
+    tags: [transit]
+
+  - name: transfer-service-fee-topup
+    match:
+      details: '^Սպասարկման վարձի վճարում$'
+      sign: '+'
+    account: Assets:Transfers:Pending
+    narration: Пополнение под плату за обслуживание
+    tags: [transit]
+
+  - name: acba-currency-exchange
+    match:
+      type: '^CEX$'
+    account: Assets:Transfers:Pending
+    narration: Обмен валюты
+    tags: [transit]
+
+  - name: acba-internal-transfer
+    match:
+      details: '^(Transfer|Credit to card account|Debit from card account)$'
+    account: Assets:Transfers:Pending
+    narration: Перевод между своими счетами
+    tags: [transit]
+
+  # Свой счёт узнаём по номеру, а не по имени владельца: имя в выписке
+  # пишется по-разному, а номер один и тот же.
+  - name: transfer-to-own-account
+    match:
+      correspondent: '^(100000000000001|100000000000002|100000000000003|100000000000011|100000000000012|100000000000013)$'
+    account: Assets:Transfers:Pending
+    narration: Перевод между своими счетами
+    tags: [transit]
+
+  # ─────────────────────────────── наличные ───────────────────────────────
+
+  - name: atm
+    match:
+      details: '^Ք: ATM '
+    account: Assets:Cash
+    payee: ATM
+
+  - name: acba-cash-withdrawal
+    match:
+      details: '^Cash Withdrawal$'
+    account: Assets:Cash
+    payee: ATM
+
+  - name: acba-atm
+    match:
+      text: '\bATM ACBA\b'
+    account: Assets:Cash
+    payee: ATM
+
+  # ──────────────────────────────── доходы ────────────────────────────────
+
+  - name: gov-cashback
+    match:
+      details: '^\d{4}-\d{2} անկանխիկ'
+    account: Income:Cashback:Government
+    narration: Государственный кешбэк за безналичные платежи
+
+  # ─────────────────────────────── мерчанты ───────────────────────────────
+  # Частные правила выше общих: SAS DELIVERY должен победить просто SAS.
+
+  - name: sas-delivery
+    match:
+      text: '\bSAS DELIVERY\b'
+    account: Expenses:Food:Delivery
+    payee: SAS Delivery
+
+  - name: yandex-eats
+    match:
+      text: '\bYANDEX EATS\b'
+    account: Expenses:Food:Delivery
+    payee: Yandex Eats
+
+  - name: glovo
+    match:
+      text: '\bGLOVO\b'
+    account: Expenses:Food:Delivery
+    payee: Glovo
+
+  - name: yandex-go
+    match:
+      text: '\bYANDEX\.? ?GO\b'
+    account: Expenses:Transport:Taxi
+    payee: Yandex Go
+
+  - name: jur-am-water
+    match:
+      text: '\bJUR\.AM\b'
+    account: Expenses:Food:Water
+    payee: Jur.am
+
+  # \b не даст зацепить SASUN SURNAME.
+  - name: sas-supermarket
+    match:
+      text: '\bSAS\b'
+    account: Expenses:Food:Groceries
+    payee: SAS
+
+  - name: yerevan-city
+    match:
+      text: '\bYEREVAN[- ]CITY\b'
+    account: Expenses:Food:Groceries
+    payee: Yerevan City
+
+  - name: groceries-other
+    match:
+      text: '\bMG SHINARARNER\b'
+    account: Expenses:Food:Groceries
+
+  - name: pharmacy
+    match:
+      text: '\b911 PHARM\b'
+    account: Expenses:Health:Pharmacy
+
+  - name: medical
+    match:
+      text: '\bINVITRO\b'
+    account: Expenses:Health:Medical
+
+  - name: shopping
+    match:
+      text: '\bSOYAKIM\b'
+    account: Expenses:Shopping
+
+  - name: onex-parcels
+    match:
+      text: '\bONEX\b'
+    account: Expenses:Shopping:Delivery
+    payee: ONEX
+    narration: Доставка посылок
+
+  - name: apple
+    match:
+      text: '\bAPPLE\.COM/BILL\b'
+    account: Expenses:Subscriptions
+    payee: Apple
+
+  - name: ucom-internet
+    match:
+      text: '^Ucom Payment:|\bUCOM\b'
+    account: Expenses:Utilities:Internet
+    payee: Ucom
+    narration: Интернет и связь
+
+  - name: entertainment
+    match:
+      text: '\bCINEMA STAR\b'
+    account: Expenses:Entertainment
+
+  - name: travel
+    match:
+      text: '\bJERMUK HOTEL\b'
+    account: Expenses:Travel

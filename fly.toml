@@ -1,0 +1,47 @@
+# Конфигурация fly.io. Имя приложения и регион поменяйте под себя:
+# от имени зависит адрес вида https://<app>.fly.dev
+app = "family-debit"
+# Регион обязан совпадать с регионом тома: машина поднимается в primary_region,
+# а том к другому региону подключить нельзя.
+primary_region = "cdg"
+
+[build]
+
+[env]
+  FINANCE_INBOX = "/data/inbox"
+  # Правила и список счетов лежат рядом с леджером, на томе: в них личные
+  # данные, поэтому в образе их нет — только образцы.
+  FINANCE_LEDGER = "/data/ledger"
+  # Как часто складывать изменения леджера в коммит, секунды.
+  LEDGER_SYNC_SECONDS = "900"
+
+# Том переживает деплои: на нём леджер, загруженные выписки и секреты.
+# Образ пересобирается при каждом деплое, данные — нет.
+[[mounts]]
+  source = "finance_data"
+  destination = "/data"
+  initial_size = "1gb"
+
+[http_service]
+  internal_port = 8080
+  # TLS терминирует fly, до контейнера доходит http — Caddy настроен на это.
+  force_https = true
+  auto_start_machines = true
+  # Машина засыпает без запросов и просыпается на первый. Для домашнего
+  # использования это несколько секунд ожидания раз в день и заметно дешевле,
+  # чем держать её включённой круглосуточно.
+  auto_stop_machines = "stop"
+  min_machines_running = 0
+
+  # Проверка живости идёт мимо пароля — см. блок handle /healthz в Caddyfile.
+  [[http_service.checks]]
+    grace_period = "20s"
+    interval = "30s"
+    method = "GET"
+    path = "/healthz"
+    timeout = "5s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  # 256 МБ не хватает: fava держит разобранный леджер в памяти, плюс Caddy.
+  memory = "512mb"
