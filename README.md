@@ -343,7 +343,7 @@ python -c "import base64, os; print(base64.b32encode(os.urandom(20)).decode().rs
 
 ```powershell
 flyctl apps create <имя-приложения>
-flyctl volumes create finance_data --size 1 --region fra
+flyctl volumes create finance_data --size 1 --region cdg
 
 flyctl secrets set `
   'FAVA_USERS=artem:<bcrypt>,dariia:<bcrypt>' `
@@ -363,6 +363,10 @@ fine-grained personal access token, выданный ровно на этот о
 внятной причины. При старте контейнер проверяет формат хеша и ругается, если он
 испорчен, — но проще сразу писать одинарные.
 
+**Регион тома обязан совпадать с `primary_region` в fly.toml.** Машина
+поднимается в primary_region, а том к другому региону подключить нельзя: деплой
+пройдёт, но машина останется без данных.
+
 `LEDGER_REMOTE` формально необязателен, но без него том остаётся единственной
 копией леджера, а fly прямо предупреждает, что тома не реплицируются и при
 отказе диска данные теряются. Проверено на практике: если уничтожить том,
@@ -379,6 +383,30 @@ git commit -m "Леджер: импорт Ameriabank и ACBA за 2026 год"
 git remote add origin git@github.com:slipmetal/family-ledger-data.git
 git push -u origin main
 ```
+
+### Автоматический деплой
+
+[.github/workflows/ci.yml](.github/workflows/ci.yml) гоняет тесты на каждый push
+и pull request, а деплоит только с `main` и только после зелёных тестов. Образ
+собирается на стороне fly (`--remote-only`), локальный docker в раннере не нужен.
+
+Деплои поставлены в очередь по одному: два одновременных поссорились бы за
+единственный том.
+
+Нужен один секрет в настройках репозитория — `FLY_API_TOKEN`:
+
+```powershell
+flyctl tokens create deploy -a <имя-приложения> -x 8760h
+```
+
+Токен выдаётся ровно на это приложение и живёт год. В репозитории он кладётся
+в Settings → Secrets and variables → Actions.
+
+Тесты в CI идут без клона леджера: он в другом репозитории, и токена на него у
+раннера нет. Проверки, которым нужен леджер, пропускаются сами, остальные
+работают на анонимизированных фикстурах. Заодно на каждом прогоне отрабатывает
+`tests/test_no_secrets.py` — настоящий номер счёта не доедет до `main`
+незамеченным.
 
 ### Проверка перед деплоем
 
