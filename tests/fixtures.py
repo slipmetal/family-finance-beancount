@@ -12,7 +12,15 @@ ROOT = Path(__file__).resolve().parents[1]
 #: Правила для тестов. Боевые лежат рядом с леджером и эталоны не ломают.
 RULES = ROOT / "tests" / "rules.yaml"
 
-AMERIA_DIR = ROOT / "tests" / "ameria"
+AMERIA_CARD_DIR = ROOT / "tests" / "ameria" / "card"
+#: Выписка по счёту приходит в другом формате, поэтому и папка своя:
+#: beangulp generate считает ошибкой файл, который проверяемый импортёр
+#: не опознаёт.
+AMERIA_ACCOUNT_DIR = ROOT / "tests" / "ameria" / "account"
+AMERIA_SAVINGS_ACCOUNT = "Assets:Ameria:Usd"
+AMERIA_SAVINGS_MARKER = "usd"
+#: Номер сберегательного счёта: заглушка на 1000, как у остальных своих.
+AMERIA_SAVINGS_NUMBER = "1000053294282901"
 AMERIA_ACCOUNT = "Assets:Ameria:Card0001"
 AMERIA_MARKER = "card0001"
 #: Вторая карта в той же валюте: различить их можно только по метке.

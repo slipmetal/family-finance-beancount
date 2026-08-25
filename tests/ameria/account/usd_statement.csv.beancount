@@ -1,0 +1,81 @@
+;; Account: Assets:Ameria:Usd
+;; Date: 2026-03-31
+;; Name: ameria-usd-account.csv
+
+2026-01-15 * "Firstname Lastname" "Перевод собственных средств" #transit
+  ameria-id: "usd:2026-01-15:100001-1"
+  bank-type: "Between my accounts"
+  correspondent: "1000012345678901"
+  details: "Transfer of own funds"
+  Assets:Ameria:Usd         500.0 USD
+  Assets:Transfers:Pending
+
+2026-01-31 * "Ameriabank" "Проценты по сберегательному счёту"
+  ameria-id: "usd:2026-01-31:100002-1"
+  bank-type: "Interest repayment"
+  correspondent: "1000025909563302"
+  counterparty: "Firstname Lastname"
+  details: "% կապիտ. ըստ 53294282901 հաշվի"
+  Assets:Ameria:Usd  3.15 USD
+  Income:Interest
+
+2026-01-31 * "Ameriabank" "Подоходный налог с процентов"
+  ameria-id: "usd:2026-01-31:100002-2"
+  bank-type: "Tax charge"
+  correspondent: "1000039102524800"
+  counterparty: "002/Տոկոսներից/ռեզ.ֆիզ.անձ/եկամտային հարկ"
+  details: "Հարկի(Tax) պահում ըստ 53294282901"
+  Assets:Ameria:Usd      -0.32 USD
+  Expenses:Taxes:Income
+
+2026-02-14 * "Firstname Lastname" "Перевод собственных средств" #transit
+  ameria-id: "usd:2026-02-14:172-1"
+  bank-type: "Currency exchange"
+  correspondent: "1000094070890758"
+  details: "Transfer of own funds"
+  Assets:Ameria:Usd         195.28 USD
+  Assets:Transfers:Pending
+
+2026-02-20 * "Firstname Lastname" "Перевод собственных средств" #transit
+  ameria-id: "usd:2026-02-20:100003-1"
+  bank-type: "Between my accounts"
+  correspondent: "1000012345678901"
+  details: "Transfer of own funds"
+  Assets:Ameria:Usd         -60.0 USD
+  Assets:Transfers:Pending
+
+2026-02-28 * "Ameriabank" "Плата за обслуживание счёта"
+  ameria-id: "usd:2026-02-28:130206-1"
+  bank-type: "Currency exchange"
+  correspondent: "1000034060200600"
+  counterparty: "Firstname Lastname"
+  details: "Սպասարկման վարձի վճարում"
+  Assets:Ameria:Usd           -1.41 USD
+  Expenses:Fees:Bank:Service
+
+2026-03-15 * "Ameriabank" "Пополнение срочного вклада"
+  ameria-id: "usd:2026-03-15:-1"
+  bank-type: "Deposit replenishment"
+  correspondent: "1000064609093305"
+  counterparty: "Firstname Lastname"
+  details: "N NA20021781 Ավանդի ներգրավում"
+  Assets:Ameria:Usd      -1000.0 USD
+  Assets:Ameria:Deposit
+
+2026-03-31 * "Ameriabank" "Проценты по сберегательному счёту"
+  ameria-id: "usd:2026-03-31:100004-1"
+  bank-type: "Interest repayment"
+  correspondent: "1000025909563302"
+  counterparty: "Firstname Lastname"
+  details: "% կապիտ. ըստ 53294282901 հաշվի"
+  Assets:Ameria:Usd  4.01 USD
+  Income:Interest
+
+2026-03-31 * "Ameriabank" "Подоходный налог с процентов"
+  ameria-id: "usd:2026-03-31:100004-2"
+  bank-type: "Tax charge"
+  correspondent: "1000039102524800"
+  counterparty: "002/Տոկոսներից/ռեզ.ֆիզ.անձ/եկամտային հարկ"
+  details: "Հարկի(Tax) պահում ըստ 53294282901"
+  Assets:Ameria:Usd      -0.40 USD
+  Expenses:Taxes:Income

@@ -39,8 +39,18 @@ class ConfigError(Exception):
 BANKS: dict[str, tuple[tuple[str, ...], Callable[[dict, Rules], Any]]] = {
     "ameria": (
         ("marker",),
-        lambda spec, rules: ameria.Importer(
+        lambda spec, rules: ameria.CardImporter(
             spec["account"], spec["currency"], rules, marker=spec["marker"]
+        ),
+    ),
+    # Метка нужна, потому что номера счёта в файле нет; номер — потому что
+    # в описании процентов банк печатает его хвост, и это единственная
+    # возможность перепроверить метку по содержимому.
+    "ameria-account": (
+        ("marker", "number"),
+        lambda spec, rules: ameria.AccountImporter(
+            spec["account"], spec["currency"], rules,
+            marker=spec["marker"], number=spec["number"],
         ),
     ),
     "acba-card": (

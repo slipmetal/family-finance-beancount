@@ -1,12 +1,23 @@
-"""Импортёр выписок Ameriabank (Армения).
+"""Импортёры выписок Ameriabank (Армения).
 
-Формат: CSV из интернет-банка, UTF-8 с BOM, все поля закавычены.
+Банк отдаёт CSV двух разных форматов, и общего у них только кодировка. Поэтому
+здесь два импортёра, как у ACBA:
 
-    "Transaction date","Settlement date","Transaction type","Receiver/Sender",
-    "Transaction details","Transaction amount","Transaction amount in account currency"
-    "19/01/26, 14:12","19/01/26, 14:12","Արտարժույթի փոխանակում",...,"+2,500.00 AMD","+2,500.00 AMD"
+* `CardImporter` — **выписка по карте**. Одна знаковая сумма с кодом валюты
+  внутри поля, время операции, но контрагент только именем:
 
-Особенности, из-за которых нельзя обойтись голым `str.split`:
+      "Transaction date","Settlement date","Transaction type","Receiver/Sender",
+      "Transaction details","Transaction amount","Transaction amount in account currency"
+      "19/01/26, 14:12","19/01/26, 14:12","Արտարժույթի փոխանակում",…,"+2,500.00 AMD"
+
+* `AccountImporter` — **выписка по счёту** (в том числе сберегательному).
+  Раздельные Credit/Debit без знака, даты без времени, зато есть номер счёта
+  контрагента и строка оборотов в конце:
+
+      Date,Document No,Operation Type,Account,Recipient/Sender,Purpose,Category,Credit,Debit
+      26.03.2026,181987,Between my accounts,1000012345678901,…,Transfer of own funds,,0,700.0
+
+Особенности карточного формата, из-за которых нельзя обойтись голым `str.split`:
   * внутри поля даты есть запятая, поэтому нужен настоящий CSV-парсер;
   * сумма приходит одной знаковой строкой с разделителем тысяч и кодом валюты
     внутри поля (`-2,500.00 AMD`), отдельных колонок дебет/кредит нет;
@@ -14,15 +25,24 @@
     строк в образце это `Քարտային գործարք`, куда свалены и покупки, и возвраты,
     и банкомат, и комиссии. Категории подбираются по `Transaction details`
     правилами из rules.yaml, а тип уходит в метаданные.
+
+Общее у обоих: **номера счёта в файле нет**, поэтому счёт определяется меткой
+в имени файла. Метка, а не папка: fava кладёт всё загруженное через браузер
+в одну папку, и выписка второго счёта молча досталась бы первому.
 """
 
 from __future__ import annotations
 
 import csv
+import datetime as dt
 import re
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
+import beangulp
+from beancount.core import amount as bc_amount
 from beancount.core import data, flags
+from beangulp import extract
 from beangulp.importers import csvbase
 
 from finance.booking import categorize
@@ -60,8 +80,8 @@ class Time(csvbase.Column):
         return found.group(1) if found else ""
 
 
-class Importer(csvbase.Importer):
-    """Ameriabank (Armenia) CSV statement."""
+class CardImporter(csvbase.Importer):
+    """Ameriabank (Armenia) card CSV statement."""
 
     # Без utf-8-sig BOM приклеивается к имени первой колонки и ломает поиск по шапке.
     encoding = "utf-8-sig"
@@ -201,3 +221,227 @@ def _clean_narration(details: str) -> str:
     if text.startswith(CARD_PREFIX):
         text = text[len(CARD_PREFIX) :]
     return re.sub(r"\s{2,}", " ", text).strip()
+
+
+# ─────────────────────── выписка по счёту: другой CSV ───────────────────────
+
+#: Шапка выписки по счёту. Служит подписью формата в `identify()`.
+ACCOUNT_COLUMNS = (
+    "Date",
+    "Document No",
+    "Operation Type",
+    "Account",
+    "Recipient/Sender",
+    "Purpose",
+    "Category",
+    "Credit",
+    "Debit",
+)
+(
+    COL_DATE,
+    COL_DOCUMENT,
+    COL_TYPE,
+    COL_CORRESPONDENT,
+    COL_COUNTERPARTY,
+    COL_PURPOSE,
+    COL_CATEGORY,
+    COL_CREDIT,
+    COL_DEBIT,
+) = range(len(ACCOUNT_COLUMNS))
+
+ACCOUNT_DATE_FORMAT = "%d.%m.%Y"
+
+#: Хвост номера счёта внутри описания процентов и налога с них:
+#: «% կապիտ. ըստ 53294282901 հաշվի». Единственное место во всём файле, где
+#: номер счёта вообще встречается, — и то не в каждой выписке.
+ACCOUNT_TAIL_RE = re.compile(r"ըստ\s+(\d{6,})")
+
+
+class AccountImporter(beangulp.Importer):
+    """Ameriabank (Armenia) account CSV statement."""
+
+    encoding = "utf-8-sig"
+
+    def __init__(self, account: str, currency: str, rules: Rules, *, marker: str, number: str = ""):
+        self.importer_account = account
+        self.currency = currency
+        self.rules = rules
+        self.marker = marker.lower()
+        self.number = number
+
+    @property
+    def name(self) -> str:
+        """Префикс отличается от карточного: метки задаёт человек, и ничто не
+        мешает ему совпасть у выписки по карте и по счёту."""
+        return f"ameria-account.{self.marker}"
+
+    def identify(self, filepath: str) -> bool:
+        """Опознать файл по метке в имени, шапке и хвосту номера счёта.
+
+        Номера счёта в файле нет — как и в карточной выписке, — поэтому метка
+        в имени обязательна. Но в описании процентов банк печатает последние
+        цифры счёта, и если они нашлись, то работают как право вето: ошиблись
+        меткой — файл не опознается вместо того, чтобы уехать не на тот счёт.
+
+        Вето, а не требование: в выписке за период без начисления процентов
+        номера нет вообще, да и номер счёта в accounts.yaml необязателен.
+        """
+        path = Path(filepath)
+        if path.suffix.lower() != ".csv":
+            return False
+        if self.marker not in path.name.lower():
+            return False
+
+        rows = _read(path, self.encoding)
+        if rows is None or tuple(name.strip() for name in rows[0]) != ACCOUNT_COLUMNS:
+            return False
+        tail = _account_tail(rows[1:])
+        return tail is None or not self.number or self.number.endswith(tail)
+
+    def account(self, filepath: str) -> str:
+        return self.importer_account
+
+    def date(self, filepath: str) -> dt.date | None:
+        """Дат периода в файле нет — берём последнюю операцию."""
+        rows = _read(Path(filepath), self.encoding)
+        dates = [_date(r[COL_DATE]) for r in (rows or [])[1:] if r and r[COL_DATE].strip()]
+        return max(dates) if dates else None
+
+    def filename(self, filepath: str) -> str:
+        return f"ameria-{self.currency.lower()}-account.csv"
+
+    def extract(self, filepath: str, existing: data.Entries) -> data.Entries:
+        rows = _read(Path(filepath), self.encoding)
+        if rows is None:
+            return []
+
+        body = [r for r in rows[1:] if r and r[COL_DATE].strip()]
+        totals = [r for r in rows[1:] if r and not r[COL_DATE].strip()]
+        _check_totals(body, totals, filepath)
+
+        seen: dict[str, int] = {}
+        return [self._transaction(filepath, i, row, seen) for i, row in enumerate(body)]
+
+    def _transaction(self, filepath: str, index: int, row, seen: dict[str, int]) -> data.Transaction:
+        value = _number(row[COL_CREDIT]) - _number(row[COL_DEBIT])
+
+        meta = data.new_metadata(filepath, index + 2)
+        meta["ameria-id"] = _account_key(self.marker, row, seen)
+        if row[COL_TYPE].strip():
+            meta["bank-type"] = row[COL_TYPE].strip()
+        if row[COL_CORRESPONDENT].strip():
+            meta["correspondent"] = row[COL_CORRESPONDENT].strip()
+
+        txn = data.Transaction(
+            meta,
+            _date(row[COL_DATE]),
+            flags.FLAG_OKAY,
+            None,
+            "",
+            frozenset(),
+            frozenset(),
+            [
+                data.Posting(
+                    self.importer_account,
+                    bc_amount.Amount(value, self.currency),
+                    None,
+                    None,
+                    None,
+                    None,
+                )
+            ],
+        )
+        return categorize(
+            txn,
+            self.rules,
+            counterparty=row[COL_COUNTERPARTY].strip(),
+            details=row[COL_PURPOSE].strip(),
+            amount=value,
+            # Тип операции здесь, в отличие от карточной выписки, осмысленный:
+            # `Interest repayment`, `Tax charge`, `Currency exchange` — по нему
+            # и пишутся правила, причём по-английски, а не по-армянски.
+            txn_type=row[COL_TYPE].strip(),
+            # Номер счёта контрагента есть только в этом формате. По нему
+            # опознаются переводы на свои же счета — по номеру, а не по имени.
+            correspondent=row[COL_CORRESPONDENT].strip(),
+        )
+
+    def deduplicate(self, entries: data.Entries, existing: data.Entries) -> None:
+        """Точный дедуп по номеру документа вместо эвристики по дате и сумме."""
+        known = {
+            entry.meta["ameria-id"]: entry
+            for entry in existing
+            if isinstance(entry, data.Transaction) and "ameria-id" in entry.meta
+        }
+        for entry in entries:
+            match = known.get(entry.meta.get("ameria-id"))
+            if match is not None:
+                entry.meta[extract.DUPLICATE] = match
+
+
+def _read(path: Path, encoding: str) -> list[list[str]] | None:
+    try:
+        with open(path, encoding=encoding, newline="") as fd:
+            rows = list(csv.reader(fd))
+    except (OSError, UnicodeDecodeError, csv.Error):
+        return None
+    return rows if rows else None
+
+
+def _account_tail(rows) -> str | None:
+    """Последние цифры номера счёта из описания процентов, если они там есть."""
+    for row in rows:
+        if len(row) > COL_PURPOSE:
+            found = ACCOUNT_TAIL_RE.search(row[COL_PURPOSE])
+            if found:
+                return found.group(1)
+    return None
+
+
+def _number(text: str) -> Decimal:
+    """Разобрать сумму из колонки Credit или Debit. Пустая клетка — ноль."""
+    cleaned = (text or "").strip().replace(",", "")
+    if not cleaned:
+        return Decimal(0)
+    try:
+        return Decimal(cleaned)
+    except InvalidOperation as exc:
+        raise ValueError(f"не разобрать сумму {text!r}") from exc
+
+
+def _date(text: str) -> dt.date:
+    return dt.datetime.strptime(text.strip(), ACCOUNT_DATE_FORMAT).date()
+
+
+def _account_key(marker: str, row, seen: dict[str, int]) -> str:
+    """Ключ дедупа: метка счёта, дата и номер документа.
+
+    Номер документа сам по себе не годится: у процентов и удержанного с них
+    налога он общий, а у части операций его нет вовсе. Дата в ключе тоже
+    обязательна — номера короткие и сквозные внутри периода (`172`, `198`,
+    `203`), так что в следующем году они пойдут по второму кругу.
+    """
+    base = f"{marker}:{_date(row[COL_DATE]):%Y-%m-%d}:{row[COL_DOCUMENT].strip()}"
+    seen[base] = seen.get(base, 0) + 1
+    return f"{base}-{seen[base]}"
+
+
+def _check_totals(body, totals, filepath: str) -> None:
+    """Сверить разобранное с оборотами из последней строки выписки.
+
+    Строка оборотов у Ameriabank идёт последней и отличается пустой датой.
+    Проверка ловит потерянные при разборе строки — то же, что делают сверки
+    у Т-Банка и Сбербанка.
+    """
+    if not totals:
+        raise ValueError(f"{filepath}: в выписке нет строки оборотов — разбор не с чем сверить")
+
+    row = totals[-1]
+    for column, label in ((COL_CREDIT, "приход"), (COL_DEBIT, "расход")):
+        counted = sum((_number(r[column]) for r in body), Decimal(0))
+        stated = _number(row[column])
+        if counted != stated:
+            raise ValueError(
+                f"{filepath}: разобрано операций на {counted} ({label}), а в выписке "
+                f"{stated} — разница {counted - stated}. Похоже, разбор потерял строки"
+            )

@@ -1,0 +1,11 @@
+Date,Document No,Operation Type,Account,Recipient/Sender,Purpose,Category,Credit,Debit
+15.01.2026,100001,Between my accounts,1000012345678901,Firstname Lastname,Transfer of own funds,,500.0,0
+31.01.2026,100002,Interest repayment,1000025909563302,Firstname Lastname,% կապիտ. ըստ 53294282901 հաշվի,,3.15,0
+31.01.2026,100002,Tax charge,1000039102524800,002/Տոկոսներից/ռեզ.ֆիզ.անձ/եկամտային հարկ,Հարկի(Tax) պահում ըստ 53294282901,,0,0.32
+14.02.2026,172,Currency exchange,1000094070890758,Firstname Lastname,Transfer of own funds,,195.28,0
+20.02.2026,100003,Between my accounts,1000012345678901,Firstname Lastname,Transfer of own funds,,0,60.0
+28.02.2026,130206,Currency exchange,1000034060200600,Firstname Lastname,Սպասարկման վարձի վճարում,,0,1.41
+15.03.2026,,Deposit replenishment,1000064609093305,Firstname Lastname,N NA20021781 Ավանդի ներգրավում,,0,1000.0
+31.03.2026,100004,Interest repayment,1000025909563302,Firstname Lastname,% կապիտ. ըստ 53294282901 հաշվի,,4.01,0
+31.03.2026,100004,Tax charge,1000039102524800,002/Տոկոսներից/ռեզ.ֆիզ.անձ/եկամտային հարկ,Հարկի(Tax) պահում ըստ 53294282901,,0,0.40
+,,,,,,,702.44,1062.13

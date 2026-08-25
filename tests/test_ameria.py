@@ -17,18 +17,18 @@ from pathlib import Path
 import pytest
 
 from finance.categorize import Rules
-from finance.importers.ameria import Importer, _clean_narration
+from finance.importers.ameria import CardImporter, _clean_narration
 from tests.fixtures import (
     AMERIA_ACCOUNT,
     AMERIA_ACCOUNT_OTHER,
-    AMERIA_DIR,
+    AMERIA_CARD_DIR,
     AMERIA_MARKER,
     AMERIA_MARKER_OTHER,
     RULES,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
-FIXTURES = AMERIA_DIR
+FIXTURES = AMERIA_CARD_DIR
 # Метка счёта в имени обязательна — по ней импортёр и опознаёт файл.
 STATEMENT = FIXTURES / f"{AMERIA_MARKER}_statement.csv"
 
@@ -40,14 +40,14 @@ def rules() -> Rules:
 
 @pytest.fixture(scope="module")
 def importer(rules) -> Importer:
-    return Importer(AMERIA_ACCOUNT, "AMD", rules, marker=AMERIA_MARKER)
+    return CardImporter(AMERIA_ACCOUNT, "AMD", rules, marker=AMERIA_MARKER)
 
 
 def test_golden_file_matches():
     """Эталон покрывает разбор строк плюс account(), date() и filename().
 
     Разошлось после правки tests/rules.yaml — посмотрите дифф и, если он ожидаемый,
-    перегенерируйте: `python ameria_test.py generate tests/ameria`.
+    перегенерируйте: `python ameria_test.py generate tests/ameria/card`.
     """
     result = subprocess.run(  # noqa: S603
         [sys.executable, str(ROOT / "ameria_test.py"), "test", str(FIXTURES)],
@@ -83,8 +83,8 @@ def test_marker_in_filename_selects_the_account(rules, tmp_path):
     бы первой.
     """
     raw = STATEMENT.read_text(encoding="utf-8-sig")
-    mine = Importer(AMERIA_ACCOUNT, "AMD", rules, marker=AMERIA_MARKER)
-    other = Importer(AMERIA_ACCOUNT_OTHER, "AMD", rules, marker=AMERIA_MARKER_OTHER)
+    mine = CardImporter(AMERIA_ACCOUNT, "AMD", rules, marker=AMERIA_MARKER)
+    other = CardImporter(AMERIA_ACCOUNT_OTHER, "AMD", rules, marker=AMERIA_MARKER_OTHER)
 
     # Один и тот же каталог — различает только имя файла.
     for name, owner, stranger in [
@@ -111,7 +111,7 @@ def test_currency_vetoes_a_mislabelled_file(rules, tmp_path):
     in_rubles.write_text(
         STATEMENT.read_text(encoding="utf-8-sig").replace("AMD", "RUB"), encoding="utf-8-sig"
     )
-    amd = Importer(AMERIA_ACCOUNT, "AMD", rules, marker=AMERIA_MARKER)
+    amd = CardImporter(AMERIA_ACCOUNT, "AMD", rules, marker=AMERIA_MARKER)
     assert not amd.identify(str(in_rubles))
 
 

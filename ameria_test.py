@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Regression-тест импортёра Ameriabank на эталонных файлах.
 
-    python ameria_test.py test tests/ameria          # сверить с эталоном
-    python ameria_test.py generate tests/ameria      # перегенерировать эталон
+    python ameria_test.py test tests/ameria/card          # сверить с эталоном
+    python ameria_test.py generate tests/ameria/card      # перегенерировать эталон
 
 Эталон — это `tests/ameria/*.csv.beancount` рядом с входным CSV. Он проверяет
 не только разбор строк, но и account(), date() и filename().
@@ -17,10 +17,10 @@ from beangulp.testing import main
 
 from finance.categorize import Rules
 from finance.cli import ensure_utf8_mode
-from finance.importers.ameria import Importer
+from finance.importers.ameria import CardImporter
 from tests.fixtures import AMERIA_ACCOUNT, AMERIA_MARKER, RULES
 
 ensure_utf8_mode()
 
 if __name__ == "__main__":
-    main(Importer(AMERIA_ACCOUNT, "AMD", Rules.load(RULES), marker=AMERIA_MARKER))
+    main(CardImporter(AMERIA_ACCOUNT, "AMD", Rules.load(RULES), marker=AMERIA_MARKER))

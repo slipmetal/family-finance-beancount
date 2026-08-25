@@ -161,6 +161,29 @@ rules:
     account: Income:Cashback:Bank
     payee: Т-Банк
 
+  # Сберегательные счета Ameriabank. Тип операции в этом формате приходит
+  # по-английски и однозначно — матчим по нему, а не по армянскому описанию.
+  - name: ameria-savings-interest
+    match:
+      type: '^Interest repayment$'
+    account: Income:Interest
+    payee: Ameriabank
+    narration: Проценты по сберегательному счёту
+
+  - name: ameria-savings-income-tax
+    match:
+      type: '^Tax charge$'
+    account: Expenses:Taxes:Income
+    payee: Ameriabank
+    narration: Подоходный налог с процентов
+
+  - name: ameria-deposit
+    match:
+      type: '^Deposit replenishment$'
+    account: Assets:Ameria:Deposit
+    payee: Ameriabank
+    narration: Пополнение срочного вклада
+
   # ────────────────────────── операции Сбербанка ──────────────────────────
   # Сбербанк сам проставляет категорию операции, и она приходит в `type`.
   # У остальных банков там код вроде TRF, здесь — человеческое название.
