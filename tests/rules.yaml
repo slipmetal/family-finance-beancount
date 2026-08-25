@@ -2,9 +2,12 @@
 # репозитории, и в тестах не участвует: иначе правка правил ломала бы эталонные
 # файлы, а личные данные попадали бы в репозиторий через них.
 #
-# Здесь ровно то, что нужно фикстурам из tests/acba и tests/ameria. Номера
-# счетов — те же заглушки, что и в фикстурах (свои начинаются на 1000).
-# Формат и его возможности описаны в rules.example.yaml.
+# Здесь ровно то, что нужно фикстурам из tests/acba, tests/ameria и
+# tests/tbank. Номера счетов — те же заглушки, что и в фикстурах (свои
+# начинаются на 1000). Формат и его возможности описаны в rules.example.yaml.
+#
+# У Т-Банка нет ни колонки контрагента, ни колонки типа операции: и то и другое
+# лежит внутри описания, поэтому его правила пишутся по `details`.
 
 default_account: Expenses:Uncategorized
 
@@ -47,6 +50,12 @@ rules:
     account: Expenses:Fees:Bank:Service
     payee: ACBA Bank
     narration: Плата за обслуживание карты
+
+  - name: tbank-fee
+    match:
+      details: '^Комиссия за перевод'
+    account: Expenses:Fees:Bank:Transfer
+    payee: Т-Банк
 
   # ──────────────────── перемещения между своими счетами ────────────────────
 
@@ -93,6 +102,22 @@ rules:
     narration: Перевод между своими счетами
     tags: [transit]
 
+  # Переводы внутри Т-Банка: свои же вклады и накопительные счета. Договоры
+  # различаются номером, но все они принадлежат владельцу справки.
+  - name: tbank-internal-transfer
+    match:
+      details: '^(Внутренний перевод на договор|Внутрибанковский перевод с договора|Перевод с договора) \d+$'
+    account: Assets:Transfers:Pending
+    narration: Перевод между своими счетами
+    tags: [transit]
+
+  - name: tbank-savings-topup
+    match:
+      details: '^(Перевод для пополнения счета|Сберегательный взнос по договору)\b'
+    account: Assets:Transfers:Pending
+    narration: Пополнение накопительного счёта
+    tags: [transit]
+
   # Свой счёт узнаём по номеру, а не по имени владельца: имя в выписке
   # пишется по-разному, а номер один и тот же.
   - name: transfer-to-own-account
@@ -129,6 +154,12 @@ rules:
       details: '^\d{4}-\d{2} անկանխիկ'
     account: Income:Cashback:Government
     narration: Государственный кешбэк за безналичные платежи
+
+  - name: tbank-cashback
+    match:
+      details: '^Кэшбэк\b'
+    account: Income:Cashback:Bank
+    payee: Т-Банк
 
   # ─────────────────────────────── мерчанты ───────────────────────────────
   # Частные правила выше общих: SAS DELIVERY должен победить просто SAS.
@@ -225,3 +256,33 @@ rules:
     match:
       text: '\bJERMUK HOTEL\b'
     account: Expenses:Travel
+
+  # Мерчанты Т-Банка. Название магазина банк кладёт в описание после «Оплата в»,
+  # поэтому правило на `text` покрывало бы и его, — но выдуманные имена фикстуры
+  # незачем мешать с армянскими, и по `details` видно, к какому банку правило.
+
+  - name: tbank-supermarket
+    match:
+      details: '\bSUPERMARKET ONE\b'
+    account: Expenses:Food:Groceries
+
+  - name: tbank-delivery
+    match:
+      details: '\bDELIVERY ONE\b'
+    account: Expenses:Food:Delivery
+
+  - name: tbank-taxi
+    match:
+      details: '\bTAXI ONE\b'
+    account: Expenses:Transport:Taxi
+
+  - name: tbank-bookstore
+    match:
+      details: '\bBOOKSTORE ONE\b'
+    account: Expenses:Shopping
+
+  - name: tbank-mobile
+    match:
+      details: '^Оплата услуг Autopay\.Mobile$'
+    account: Expenses:Utilities:Mobile
+    narration: Мобильная связь

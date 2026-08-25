@@ -6,4 +6,5 @@
 # строк: .xls двоичный, а CSV Ameriabank приходит с CRLF, и эталонный разбор
 # проверяется именно на нём.
 *.xls binary
+*.pdf binary
 tests/ameria/*.csv -text
