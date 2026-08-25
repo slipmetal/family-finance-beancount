@@ -1,0 +1,112 @@
+;; Account: Assets:Tbank:Rub
+;; Date: 2026-03-31
+;; Name: tbank-rub.pdf
+
+2026-01-05 * "Оплата в SUPERMARKET ONE Moskva RUS"
+  tbank-id: "10000000000000000001:2026-01-05T09:12:-1200.00-1"
+  time: "09:12"
+  card: "1580"
+  Assets:Tbank:Rub         -1200.00 RUB
+  Expenses:Food:Groceries
+
+2026-01-06 * "Оплата в DELIVERY ONE EREVAN ARM"
+  tbank-id: "10000000000000000001:2026-01-06T14:03:-1250.75-1"
+  time: "14:03"
+  settlement: "2026-01-07"
+  original: "-5400.00 AMD"
+  card: "1580"
+  Assets:Tbank:Rub        -1250.75 RUB
+  Expenses:Food:Delivery
+
+2026-01-10 ! "Пополнение. Система быстрых платежей"
+  tbank-id: "10000000000000000001:2026-01-10T11:00:75000.00-1"
+  time: "11:00"
+  card: "1580"
+  Assets:Tbank:Rub        75000.00 RUB
+  Expenses:Uncategorized
+
+2026-02-12 * "Пополнение накопительного счёта" #transit
+  tbank-id: "10000000000000000001:2026-02-12T08:00:-3.50-1"
+  time: "08:00"
+  card: "1580"
+  details: "Перевод для пополнения счета Накопилка"
+  Assets:Tbank:Rub          -3.50 RUB
+  Assets:Transfers:Pending
+
+2026-02-12 * "Пополнение накопительного счёта" #transit
+  tbank-id: "10000000000000000001:2026-02-12T08:00:-3.50-2"
+  time: "08:00"
+  card: "1580"
+  details: "Перевод для пополнения счета Накопилка"
+  Assets:Tbank:Rub          -3.50 RUB
+  Assets:Transfers:Pending
+
+2026-02-15 ! "Внешний банковский перевод счёт 20000000000000000002, Примерный филиал АО «Первый Банк»"
+  tbank-id: "10000000000000000001:2026-02-15T19:45:-10000.00-1"
+  time: "19:45"
+  settlement: "2026-02-16"
+  card: "1580"
+  Assets:Tbank:Rub        -10000.00 RUB
+  Expenses:Uncategorized
+
+2026-02-20 * "Т-Банк" "Кэшбэк за обычные покупки"
+  tbank-id: "10000000000000000001:2026-02-20T12:30:250.00-1"
+  time: "12:30"
+  Assets:Tbank:Rub      250.00 RUB
+  Income:Cashback:Bank
+
+2026-03-01 * "Мобильная связь"
+  tbank-id: "10000000000000000001:2026-03-01T10:10:-899.00-1"
+  time: "10:10"
+  card: "2070"
+  details: "Оплата услуг Autopay.Mobile"
+  Assets:Tbank:Rub           -899.00 RUB
+  Expenses:Utilities:Mobile
+
+2026-03-05 * "Пополнение накопительного счёта" #transit
+  tbank-id: "10000000000000000001:2026-03-05T16:20:-2500.00-1"
+  time: "16:20"
+  card: "1580"
+  details: "Сберегательный взнос по договору c=1000000001;o=0000000 0-0000-4000-8000-000000 000001"
+  Assets:Tbank:Rub          -2500.00 RUB
+  Assets:Transfers:Pending
+
+2026-03-10 * "Оплата в BOOKSTORE ONE Moskva RUS"
+  tbank-id: "10000000000000000001:2026-03-10T21:05:-450.00-1"
+  time: "21:05"
+  card: "1580"
+  Assets:Tbank:Rub   -450.00 RUB
+  Expenses:Shopping
+
+2026-03-15 * "Перевод между своими счетами" #transit
+  tbank-id: "10000000000000000001:2026-03-15T13:00:12000.00-1"
+  time: "13:00"
+  card: "1580"
+  details: "Внутрибанковский перевод с договора 1000000002"
+  Assets:Tbank:Rub          12000.00 RUB
+  Assets:Transfers:Pending
+
+2026-03-18 * "Т-Банк" "Комиссия за перевод денежных средств"
+  tbank-id: "10000000000000000001:2026-03-18T09:00:-199.00-1"
+  time: "09:00"
+  card: "1580"
+  Assets:Tbank:Rub             -199.00 RUB
+  Expenses:Fees:Bank:Transfer
+
+2026-03-25 * "Оплата в TAXI ONE EREVAN ARM"
+  tbank-id: "10000000000000000001:2026-03-25T18:40:-1690.20-1"
+  time: "18:40"
+  original: "-7300.00 AMD"
+  card: "1580"
+  Assets:Tbank:Rub         -1690.20 RUB
+  Expenses:Transport:Taxi
+
+2026-03-31 * "Перевод между своими счетами" #transit
+  tbank-id: "10000000000000000001:2026-03-31T07:00:-20000.00-1"
+  time: "07:00"
+  card: "1580"
+  details: "Внутренний перевод на договор 1000000003"
+  Assets:Tbank:Rub          -20000.00 RUB
+  Assets:Transfers:Pending
+
+2026-04-01 balance Assets:Tbank:Rub                                12345.67 RUB
