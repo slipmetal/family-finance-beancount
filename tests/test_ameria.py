@@ -97,7 +97,9 @@ def test_marker_in_filename_selects_the_account(rules, tmp_path):
         assert not stranger.identify(str(path)), name
 
     # Без метки файл не достаётся никому — лучше, чем достаться не тому.
-    plain = tmp_path / "export_16439413000362500223.csv"
+    # Цифры в имени начинаются с нулей не случайно: это заглушка, иначе длинное
+    # число тут ловит tests/test_no_secrets.py как похожее на номер счёта.
+    plain = tmp_path / "export_00001643941300036250.csv"
     plain.write_text(raw, encoding="utf-8-sig")
     assert not mine.identify(str(plain))
     assert not other.identify(str(plain))
