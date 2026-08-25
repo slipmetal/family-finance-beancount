@@ -19,7 +19,7 @@ from typing import Any, Callable
 import yaml
 
 from finance.categorize import ACCOUNT_RE, Rules
-from finance.importers import acba, ameria, tbank
+from finance.importers import acba, ameria, sber, tbank
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -58,6 +58,12 @@ BANKS: dict[str, tuple[tuple[str, ...], Callable[[dict, Rules], Any]]] = {
     "tbank": (
         ("number",),
         lambda spec, rules: tbank.Importer(
+            spec["account"], spec["currency"], spec["number"], rules
+        ),
+    ),
+    "sber": (
+        ("number",),
+        lambda spec, rules: sber.Importer(
             spec["account"], spec["currency"], spec["number"], rules
         ),
     ),
