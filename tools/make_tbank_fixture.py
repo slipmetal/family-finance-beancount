@@ -151,14 +151,17 @@ ROWS = (
 # ─────────────────────────────── шрифт ───────────────────────────────
 
 
-def register_font(candidates=FONT_CANDIDATES) -> Path:
+def register_font(needed: set[str] | None = None, candidates=FONT_CANDIDATES) -> Path:
     """Найти шрифт, в котором есть все символы фикстуры, и зарегистрировать его.
 
     Покрытие проверяется явно. Без проверки недостающий глиф молча уехал бы
     в notdef: знак рубля или драма пропал бы из PDF, а разбор валюты — вместе
     с ним, причём эталон при этом перегенерировался бы без единой жалобы.
+
+    `needed` задаётся вызывающим: у фикстуры Сбербанка свой набор символов
+    (маркеры карты, короткое тире), и проверять надо именно его.
     """
-    needed = _needed_characters()
+    needed = needed if needed is not None else _needed_characters()
     tried = []
     for path in candidates:
         if not path.exists():

@@ -161,6 +161,35 @@ rules:
     account: Income:Cashback:Bank
     payee: Т-Банк
 
+  # ────────────────────────── операции Сбербанка ──────────────────────────
+  # Сбербанк сам проставляет категорию операции, и она приходит в `type`.
+  # У остальных банков там код вроде TRF, здесь — человеческое название.
+
+  - name: sber-salary
+    match:
+      details: '^(Заработная плата|Отпускные|Премия)'
+    account: Income:Salary
+    narration: Зарплата и выплаты
+
+  - name: sber-transfer-to-tbank
+    match:
+      details: '^Перевод в T-Bank$'
+    account: Assets:Transfers:Pending
+    narration: Перевод на свой счёт в Т-Банке
+    tags: [transit]
+
+  - name: sber-railway
+    match:
+      details: 'оплата ж/д перевозок'
+    account: Expenses:Travel
+    narration: Железнодорожные билеты
+
+  - name: sber-refund
+    match:
+      type: '^Возврат, отмена операции$'
+    account: Expenses:Food:Groceries
+    narration: Возврат за покупку
+
   # ─────────────────────────────── мерчанты ───────────────────────────────
   # Частные правила выше общих: SAS DELIVERY должен победить просто SAS.
 
@@ -257,16 +286,16 @@ rules:
       text: '\bJERMUK HOTEL\b'
     account: Expenses:Travel
 
-  # Мерчанты Т-Банка. Название магазина банк кладёт в описание после «Оплата в»,
-  # поэтому правило на `text` покрывало бы и его, — но выдуманные имена фикстуры
-  # незачем мешать с армянскими, и по `details` видно, к какому банку правило.
+  # Мерчанты российских банков. Имена выдуманы и намеренно общие для фикстур
+  # Т-Банка и Сбербанка: одно правило покрывает оба, и это ровно то, ради чего
+  # движок правил ничего не знает про банки.
 
-  - name: tbank-supermarket
+  - name: supermarket-one
     match:
       details: '\bSUPERMARKET ONE\b'
     account: Expenses:Food:Groceries
 
-  - name: tbank-delivery
+  - name: delivery-one
     match:
       details: '\bDELIVERY ONE\b'
     account: Expenses:Food:Delivery
@@ -276,7 +305,7 @@ rules:
       details: '\bTAXI ONE\b'
     account: Expenses:Transport:Taxi
 
-  - name: tbank-bookstore
+  - name: bookstore-one
     match:
       details: '\bBOOKSTORE ONE\b'
     account: Expenses:Shopping
