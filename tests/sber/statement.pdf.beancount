@@ -1,0 +1,108 @@
+;; Account: Assets:Sber:Rub
+;; Date: 2026-03-31
+;; Name: sber-rub.pdf
+
+2026-01-05 * "SUPERMARKET ONE MOSCOW RUS"
+  sber-id: "10000000000000000003:2026-01-05:100001-1"
+  time: "09:12"
+  bank-type: "Прочие расходы"
+  card: "****0001"
+  Assets:Sber:Rub          -1200.00 RUB
+  Expenses:Food:Groceries
+
+2026-01-06 * "DELIVERY ONE MOSCOW RUS"
+  sber-id: "10000000000000000003:2026-01-06:100002-1"
+  time: "14:03"
+  bank-type: "Прочие расходы"
+  settlement: "2026-01-07"
+  card: "****0001"
+  Assets:Sber:Rub         -1250.75 RUB
+  Expenses:Food:Delivery
+
+2026-01-10 * "Зарплата и выплаты"
+  sber-id: "10000000000000000003:2026-01-10:100003-1"
+  time: "11:00"
+  bank-type: "Прочие операции"
+  details: "Заработная плата"
+  Assets:Sber:Rub  75000.00 RUB
+  Income:Salary
+
+2026-01-15 ! "Перевод для И. Пётр Сергеевич"
+  sber-id: "10000000000000000003:2026-01-15:100004-1"
+  time: "08:00"
+  bank-type: "Перевод с карты"
+  Assets:Sber:Rub              -10037.50 RUB
+  Expenses:Fees:Bank:Transfer      37.50 RUB
+  Expenses:Uncategorized
+
+2026-01-20 * "Возврат за покупку"
+  sber-id: "10000000000000000003:2026-01-20:100005-1"
+  time: "12:30"
+  bank-type: "Возврат, отмена операции"
+  card: "****0001"
+  details: "SUPERMARKET ONE MOSCOW RUS"
+  Assets:Sber:Rub          2581.00 RUB
+  Expenses:Food:Groceries
+
+2026-02-01 * "Перевод на свой счёт в Т-Банке" #transit
+  sber-id: "10000000000000000003:2026-02-01:100006-1"
+  time: "10:10"
+  bank-type: "Перевод СБП"
+  details: "Перевод в T-Bank"
+  Assets:Sber:Rub           -90000.00 RUB
+  Assets:Transfers:Pending
+
+2026-02-05 * "BOOKSTORE ONE MOSCOW RUS"
+  sber-id: "10000000000000000003:2026-02-05:100007-1"
+  time: "16:20"
+  bank-type: "Прочие расходы"
+  settlement: "2026-02-06"
+  card: "****0001"
+  Assets:Sber:Rub    -899.00 RUB
+  Expenses:Shopping
+
+2026-02-12 ! "Оплата услуг"
+  sber-id: "10000000000000000003:2026-02-12:100008-1"
+  time: "21:05"
+  bank-type: "Оплата по QR–коду СБП"
+  Assets:Sber:Rub         -450.00 RUB
+  Expenses:Uncategorized
+
+2026-03-01 ! "Перевод от И. Анна Петровна"
+  sber-id: "10000000000000000003:2026-03-01:100009-1"
+  time: "13:00"
+  bank-type: "Перевод на карту"
+  Assets:Sber:Rub         12000.00 RUB
+  Expenses:Uncategorized
+
+2026-03-10 * "Железнодорожные билеты"
+  sber-id: "10000000000000000003:2026-03-10:100010-1"
+  time: "09:00"
+  bank-type: "Прочие расходы"
+  card: "****0001"
+  details: "оплата ж/д перевозок"
+  Assets:Sber:Rub  -199.00 RUB
+  Expenses:Travel
+
+2026-03-18 ! "MAPP_SBERBANK_ONL@IN_PAY"
+  sber-id: "10000000000000000003:2026-03-18:100011-1"
+  time: "18:40"
+  bank-type: "Прочие операции"
+  Assets:Sber:Rub              -303.58 RUB
+  Expenses:Fees:Bank:Transfer     3.01 RUB
+  Expenses:Uncategorized
+
+2026-03-25 * "Зарплата и выплаты"
+  sber-id: "10000000000000000003:2026-03-25:100012-1"
+  time: "07:00"
+  bank-type: "Прочие операции"
+  details: "Отпускные"
+  Assets:Sber:Rub  62703.00 RUB
+  Income:Salary
+
+2026-03-31 ! "Перевод для К. Наталья Васильевна"
+  sber-id: "10000000000000000003:2026-03-31:100013-1"
+  time: "23:59"
+  bank-type: "Перевод с карты"
+  Assets:Sber:Rub         -20000.00 RUB
+  Expenses:Uncategorized
