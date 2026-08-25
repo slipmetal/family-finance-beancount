@@ -22,12 +22,13 @@ def make_rules(tmp_path: Path, config: dict) -> Rules:
     return Rules.load(path)
 
 
-def apply(rules: Rules, *, counterparty="", details="", txn_type="", amount="-100"):
+def apply(rules: Rules, *, counterparty="", details="", txn_type="", amount="-100", account=""):
     return rules.apply(
         counterparty=counterparty,
         details=details,
         txn_type=txn_type,
         amount=Decimal(amount),
+        account=account,
     )
 
 
@@ -141,6 +142,98 @@ def test_rule_carries_payee_narration_and_tags(tmp_path):
     assert result.payee == "Я сам"
     assert result.narration == "Перевод между своими счетами"
     assert result.tags == frozenset({"transit"})
+
+
+# ─────────────────── правило, привязанное к счёту выписки ───────────────────
+
+
+def two_accounts(tmp_path) -> Rules:
+    """Одно описание, два счёта, разный смысл.
+
+    Ровно тот случай, ради которого поле и появилось: «Пополнение из Сбербанка»
+    на счёте, чья вторая сторона в леджере есть, — транзит, а на любом другом
+    счёте той же семьи — деньги извне.
+    """
+    return make_rules(
+        tmp_path,
+        {
+            "rules": [
+                {
+                    "name": "topup-known",
+                    "match": {"details": "^Пополнение$", "account": "^Assets:Bank:Mine$"},
+                    "account": "Assets:Transfers:Pending",
+                    "tags": ["transit"],
+                },
+                {
+                    "name": "topup-any",
+                    "match": {"details": "^Пополнение$"},
+                    "account": "Assets:External:Somewhere",
+                },
+            ]
+        },
+    )
+
+
+def test_account_narrows_the_rule_to_one_statement(tmp_path):
+    rules = two_accounts(tmp_path)
+    mine = apply(rules, details="Пополнение", account="Assets:Bank:Mine")
+    other = apply(rules, details="Пополнение", account="Assets:Bank:Other")
+    assert mine.rule == "topup-known"
+    assert mine.account == "Assets:Transfers:Pending"
+    assert other.rule == "topup-any"
+    assert other.account == "Assets:External:Somewhere"
+
+
+def test_account_unset_falls_through_to_the_general_rule(tmp_path):
+    """Импортёр, который счёт не передал, не должен случайно попасть в узкое правило."""
+    rules = two_accounts(tmp_path)
+    assert apply(rules, details="Пополнение").rule == "topup-any"
+
+
+def test_account_is_not_part_of_text(tmp_path):
+    """Иначе правило на мерчанта цеплялось бы за имя счёта."""
+    rules = make_rules(
+        tmp_path,
+        {"rules": [{"name": "merchant", "match": {"text": "Tbank"}, "account": "Expenses:Shopping"}]},
+    )
+    assert not apply(rules, details="Оплата в магазине", account="Assets:Tbank:Rub").matched
+
+
+def test_account_is_a_regexp_like_the_other_fields(tmp_path):
+    """Префикс покрывает все счета банка разом."""
+    rules = make_rules(
+        tmp_path,
+        {"rules": [{"name": "any-tbank", "match": {"account": "^Assets:Tbank:"},
+                    "account": "Expenses:Shopping"}]},
+    )
+    assert apply(rules, account="Assets:Tbank:Rub").matched
+    assert apply(rules, account="Assets:Tbank:Savings").matched
+    assert not apply(rules, account="Assets:Sber:Rub").matched
+
+
+def test_categorize_takes_the_account_from_the_first_posting(tmp_path):
+    """Стык с booking: счёт правилам передаёт не импортёр, а сама заготовка.
+
+    Ломается незаметно — если импортёр поставит ногу банка не первой, правило
+    на счёт молча перестанет срабатывать, — поэтому проверяется отдельно.
+    """
+    import datetime as dt
+
+    from beancount.core import amount as bc_amount
+    from beancount.core import data
+
+    from finance.booking import categorize
+
+    rules = two_accounts(tmp_path)
+    txn = data.Transaction(
+        {}, dt.date(2026, 1, 1), "*", None, "", frozenset(), frozenset(),
+        [data.Posting("Assets:Bank:Mine", bc_amount.Amount(Decimal("100.00"), "RUB"),
+                      None, None, None, None)],
+    )
+    built = categorize(txn, rules, counterparty="", details="Пополнение",
+                       txn_type="", amount=Decimal("100.00"))
+    assert built.postings[-1].account == "Assets:Transfers:Pending"
+    assert "transit" in built.tags
 
 
 # ──────────────────────── ошибки находятся при загрузке ────────────────────────
