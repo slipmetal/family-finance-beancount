@@ -66,6 +66,24 @@ accounts:
     currency: AMD
     number: "100000000000002"
 
+  # Следующая пара стоит здесь ради теста на уникальность имён импортёров:
+  # плоский счёт и вложенный, у которых СОВПАДАЕТ последний сегмент («Usd»).
+  #
+  # Имя импортёра раньше строилось из этого сегмента, и такая пара давала два
+  # одинаковых имени — fava отказывалась загружать конфиг импорта с ошибкой
+  # «Duplicate importer name found». В образце тогда были только плоские счета
+  # с разными валютами, поэтому тест этого не ловил. Не убирайте одну из двух:
+  # поодиночке они столкновения не воспроизводят.
+  - bank: acba-account
+    account: Assets:Acba:Usd
+    currency: USD
+    number: "100000000000003"
+
+  - bank: acba-account
+    account: Assets:Acba:SoleProprietor:Usd
+    currency: USD
+    number: "100000000000004"
+
   - bank: tbank
     account: Assets:Tbank:Rub
     currency: RUB

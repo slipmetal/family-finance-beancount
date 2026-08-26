@@ -34,6 +34,7 @@ from beangulp import extract
 
 from finance.booking import categorize
 from finance.categorize import Rules
+from finance.importers import importer_name
 
 #: ACBA обозначает рубль устаревшим кодом. beancount ожидает ISO 4217.
 CURRENCY_ALIASES = {"RUR": "RUB"}
@@ -108,7 +109,7 @@ class CardImporter(beangulp.Importer):
 
     @property
     def name(self) -> str:
-        return f"acba.{self.importer_account.rsplit(':', 1)[-1].lower()}"
+        return importer_name("acba", self.importer_account)
 
     def identify(self, filepath: str) -> bool:
         if Path(filepath).suffix.lower() != ".xls":
@@ -302,7 +303,7 @@ class AccountImporter(beangulp.Importer):
 
     @property
     def name(self) -> str:
-        return f"acba.{self.importer_account.rsplit(':', 1)[-1].lower()}"
+        return importer_name("acba", self.importer_account)
 
     def identify(self, filepath: str) -> bool:
         if Path(filepath).suffix.lower() != ".xml":

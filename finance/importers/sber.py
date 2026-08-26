@@ -45,6 +45,7 @@ from beangulp import extract
 
 from finance.booking import categorize
 from finance.categorize import Rules
+from finance.importers import importer_name
 
 #: Левые края колонок. Последняя — не край, а граница: суммы прижаты к правому
 #: полю страницы, и левый край у них гуляет вместе с длиной числа. Описание
@@ -117,7 +118,7 @@ class Importer(beangulp.Importer):
     @property
     def name(self) -> str:
         """Имя обязано быть уникальным: fava отвергает конфиг с повторами."""
-        return f"sber.{self.importer_account.rsplit(':', 1)[-1].lower()}"
+        return importer_name("sber", self.importer_account)
 
     def identify(self, filepath: str) -> bool:
         """Опознать выписку по заголовку и номеру счёта из её шапки.
