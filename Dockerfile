@@ -1,7 +1,8 @@
-# ─── Caddy с плагином второго фактора ───
+# ─── Caddy с плагином входа ───
 # Плагин не входит в стандартную сборку, поэтому Caddy собирается через xcaddy.
+# Он даёт страницу входа, сессии, второй фактор и выход — всё, чего у fava нет.
 FROM caddy:2-builder AS caddy-build
-RUN xcaddy build --with github.com/steffenbusch/caddy-postauth-2fa
+RUN xcaddy build --with github.com/greenpau/caddy-security
 
 # ─── рантайм ───
 FROM python:3.12-slim

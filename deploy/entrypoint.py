@@ -34,6 +34,9 @@ AUTH = DATA / "auth"
 FAVA_PORT = "5000"
 #: Как часто складывать изменения леджера в коммит.
 SYNC_INTERVAL = int(os.environ.get("LEDGER_SYNC_SECONDS", "900"))
+#: Сколько живёт сессия портала, секунды. Сутки: у входа появилась кнопка
+#: выхода, поэтому короткий срок ради безопасности больше не нужен.
+SESSION_SECONDS = os.environ.get("FAVA_SESSION_SECONDS", "86400")
 
 
 def log(message: str) -> None:
@@ -134,7 +137,12 @@ def seed_ledger() -> None:
 
 
 def _pairs(raw: str) -> list[tuple[str, str]]:
-    """Разобрать `user:value,user:value`. Двоеточий в bcrypt и base32 нет."""
+    """Разобрать `user:value,user:value`.
+
+    Пару делит первое двоеточие, поэтому двоеточия внутри пароля переживают
+    разбор. А вот запятая разделяет пользователей: пароль с запятой развалится
+    на два куска, и второй уедет в ошибку про неразобранную пару.
+    """
     out = []
     for chunk in raw.split(","):
         chunk = chunk.strip()
@@ -147,75 +155,136 @@ def _pairs(raw: str) -> list[tuple[str, str]]:
     return out
 
 
+def _caddy_token(value: str) -> str:
+    """Обернуть значение в кавычки так, как их понимает Caddyfile."""
+    return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+
+#: Портал требует у каждого адрес почты, хотя писем никуда не шлёт. Домен
+#: выдуманный, наружу не виден и ни на что не влияет.
+EMAIL_DOMAIN = "family.local"
+
+#: При пустой базе портал заводит учётную запись администратора сам, и отменить
+#: это нельзя. Поэтому задаём ей имя и пароль явно: пароль случайный, лежит на
+#: томе и не печатается в лог. Полагаться на то, каким его придумает плагин,
+#: не хочется. До леджера учётка всё равно не дотягивается: политика пускает
+#: только роль authp/user, а у неё authp/admin.
+PORTAL_ADMIN = "webadmin"
+
+#: Файлы прежней схемы входа: список для basic_auth, секреты TOTP и ключ
+#: подписи её сессий. Формат сессий сменился, старый ключ всё равно ничего
+#: не откроет, а второй фактор теперь лежит в базе портала. Держать это на
+#: томе незачем — секреты, которые уже ничего не защищают, только мешают.
+STALE_AUTH_FILES = ("basic-users.caddy", "2fa-secrets.json", "jwt-sign-key.txt")
+
+
 def write_auth_config() -> None:
-    """Сформировать список пользователей, секреты TOTP и ключ подписи."""
+    """Сформировать список пользователей портала и ключ подписи сессий."""
+    if not re.fullmatch(r"[1-9][0-9]*", SESSION_SECONDS):
+        sys.exit(f"FAVA_SESSION_SECONDS — целое число секунд, а не {SESSION_SECONDS!r}")
+
     users = _pairs(os.environ.get("FAVA_USERS", ""))
     if not users:
         sys.exit(
-            "FAVA_USERS не задана. Формат: 'artem:$2a$14$...,dariia:$2a$14$...'\n"
-            "Хеш получить так: docker run --rm caddy:2 caddy hash-password --plaintext 'пароль'"
+            "FAVA_USERS не задана. Формат: 'artem:пароль,dariia:пароль'\n"
+            "Пароль задаётся открытым текстом: bcrypt портал считает сам и "
+            "хранит только хеш.\nЗапятая разделяет пользователей, поэтому "
+            "в самом пароле её быть не должно."
         )
 
-    # Хеш обязан быть bcrypt: `$2<буква>$<стоимость>$<53 символа соли и хеша>`.
-    # Проверка нужна из-за очень неприятной ловушки: в PowerShell двойные
-    # кавычки раскрывают `$2a` и `$14` как переменные, хеш превращается в
-    # `$.6QWagg…`, деплой проходит, а вход молча всегда отклоняется.
-    for user, hashed in users:
-        if not re.fullmatch(r"\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}", hashed):
+    for user, _ in users:
+        if user == PORTAL_ADMIN:
             sys.exit(
-                f"пароль пользователя {user!r} не похож на bcrypt-хеш: {hashed!r}\n"
-                "Скорее всего секрет задан в двойных кавычках и PowerShell съел "
-                "части после $. Используйте одинарные."
+                f"логин {PORTAL_ADMIN!r} занят служебной учётной записью "
+                "портала — возьмите другой"
             )
 
-    # Caddyfile импортирует этот файл внутрь блока basic_auth.
-    (AUTH / "basic-users.caddy").write_text(
-        "".join(f"{user} {hashed}\n" for user, hashed in users), encoding="utf-8"
+    for user, password in users:
+        # Портал держит свою политику логинов — 3–50 символов — и ругается на
+        # нарушение уже при старте. Проверим заранее и понятными словами.
+        if not re.fullmatch(r"[a-z0-9._-]{3,50}", user):
+            sys.exit(
+                f"логин {user!r} портал не примет: нужно 3–50 символов из "
+                "строчных латинских букв, цифр, точки, дефиса и подчёркивания"
+            )
+        # Политика паролей портала — 8–128 символов.
+        if not 8 <= len(password) <= 128:
+            sys.exit(
+                f"в пароле пользователя {user!r} {len(password)} символов, "
+                "а портал требует от 8 до 128"
+            )
+        # Фигурные скобки Caddy раскрывает как подстановку даже внутри кавычек,
+        # и пароль с ними молча превратился бы во что-то другое. Ровно та же
+        # ловушка, что раньше была с `$` в bcrypt-хеше, только теперь её
+        # достаточно предотвратить проверкой.
+        if "{" in password or "}" in password:
+            sys.exit(
+                f"в пароле пользователя {user!r} есть фигурная скобка: "
+                "Caddy принял бы её за подстановку. Уберите { и }."
+            )
+
+    # Caddyfile импортирует этот файл внутрь блока local identity store.
+    # overwrite означает, что источник правды о пароле — переменная окружения:
+    # пароль, изменённый через портал, при перезапуске вернётся к заданному.
+    # Привязанных аутентификаторов это не касается, они живут в users.json.
+    portal_users = AUTH / "portal-users.caddy"
+    portal_users.write_text(
+        "".join(
+            f"user {user} {{\n"
+            f"\tname {_caddy_token(user)}\n"
+            f"\temail {_caddy_token(user + '@' + EMAIL_DOMAIN)}\n"
+            f"\tpassword {_caddy_token(password)} overwrite\n"
+            f"\troles authp/user\n"
+            "}\n"
+            for user, password in users
+        ),
+        encoding="utf-8",
     )
-    log(f"первый фактор: {', '.join(user for user, _ in users)}")
+    log(f"вход разрешён: {', '.join(user for user, _ in users)}")
 
-    totp = _pairs(os.environ.get("FAVA_TOTP", ""))
-    # Приложения-аутентификаторы показывают секрет группами и в разном
-    # регистре — приводим к тому виду, в каком его ждёт плагин.
-    totp = [(user, key.replace(" ", "").upper()) for user, key in totp]
-
-    # Секрет — base32 (RFC 4648: A–Z и 2–7) минимум на 80 бит, то есть
-    # 16 символов. Без проверки пустая или обрезанная строка проезжает молча:
-    # контейнер стартует, а войти нельзя вообще никому.
-    for user, key in totp:
-        if not re.fullmatch(r"[A-Z2-7]{16,}", key):
-            sys.exit(
-                f"TOTP-секрет пользователя {user!r} не похож на base32: {key!r}\n"
-                "Ожидается не меньше 16 символов из A-Z и 2-7, без '='."
-            )
-
-    secrets_file = AUTH / "2fa-secrets.json"
-    if totp:
-        import json
-
-        secrets_file.write_text(
-            json.dumps({user: {"totp_secret": key} for user, key in totp}, indent=2),
-            encoding="utf-8",
-        )
-        missing = {user for user, _ in users} - {user for user, _ in totp}
-        if missing:
-            # Плагин требует секрет для каждого прошедшего первый фактор:
-            # без него человек не сможет войти вообще.
-            sys.exit(f"нет TOTP-секрета для: {', '.join(sorted(missing))}")
-        log(f"второй фактор: {', '.join(user for user, _ in totp)}")
-    elif not secrets_file.exists():
-        sys.exit(
-            "FAVA_TOTP не задана. Формат: 'artem:BASE32SECRET,dariia:BASE32SECRET'\n"
-            "Секрет сгенерировать так: openssl rand 30 | base32 | tr -d '='"
-        )
-
-    # Ключ подписи сессионных JWT. Живёт на томе: пересоздание разлогинивает
-    # всех, и это единственный способ отозвать сессию — logout плагин не умеет.
-    sign_key = AUTH / "jwt-sign-key.txt"
+    # Ключ подписи сессий. Живёт на томе: пересоздание разлогинивает всех и
+    # остаётся способом отозвать сразу все сессии. Отдельную сессию теперь
+    # закрывает кнопка выхода, ради которой всё и затевалось.
+    sign_key = AUTH / "portal-sign-key.txt"
     if not sign_key.exists():
         sign_key.write_text(secrets.token_hex(32), encoding="utf-8")
         log("создан новый ключ подписи сессий")
-    for path in (AUTH / "basic-users.caddy", secrets_file, sign_key):
+    # Caddy забирает ключ из окружения, а не из текста конфига: так он не виден
+    # ни в Caddyfile, ни в выводе `caddy adapt`.
+    os.environ["PORTAL_SIGN_KEY"] = sign_key.read_text(encoding="utf-8").strip()
+
+    # А вот срок сессии через окружение не передать: плагину нужно число уже
+    # при разборе конфига, и подстановку {env....} он в этих директивах не
+    # разворачивает — спотыкается о саму строку. Пишем их файлом.
+    portal_session = AUTH / "portal-session.caddy"
+    portal_session.write_text(
+        f"crypto default token lifetime {SESSION_SECONDS}\n"
+        f"cookie lifetime {SESSION_SECONDS}\n",
+        encoding="utf-8",
+    )
+
+    # Пароль служебной учётной записи — см. PORTAL_ADMIN. Передаётся окружением,
+    # поэтому в конфиг и в лог не попадает.
+    admin_secret = AUTH / "portal-admin-secret.txt"
+    if not admin_secret.exists():
+        admin_secret.write_text(secrets.token_urlsafe(32), encoding="utf-8")
+    os.environ["AUTHP_ADMIN_USER"] = PORTAL_ADMIN
+    os.environ["AUTHP_ADMIN_EMAIL"] = f"{PORTAL_ADMIN}@{EMAIL_DOMAIN}"
+    os.environ["AUTHP_ADMIN_SECRET"] = admin_secret.read_text(encoding="utf-8").strip()
+
+    for name in STALE_AUTH_FILES:
+        stale = AUTH / name
+        if stale.exists():
+            stale.unlink()
+            log(f"удалён файл прежней схемы входа: {name}")
+
+    if os.environ.get("FAVA_TOTP"):
+        log(
+            "FAVA_TOTP больше не используется: аутентификатор привязывается "
+            "через портал. Переменную можно снять."
+        )
+
+    for path in (portal_users, sign_key, admin_secret, AUTH / "users.json"):
         if path.exists():
             path.chmod(0o600)
 
