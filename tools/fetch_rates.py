@@ -46,6 +46,8 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+# Импорты ниже — после вставки в sys.path: без неё их не найти.
+# pylint: disable=wrong-import-position
 from finance.config import LEDGER  # noqa: E402
 
 #: Путь берётся у общего конфига: при развёртывании леджер лежит на томе,
@@ -184,6 +186,7 @@ xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    """Аргументы командной строки. Период по умолчанию — с начала года по сегодня."""
     today = dt.date.today()
     parser = argparse.ArgumentParser(
         description="Забрать курсы валют у ЦБ Армении и записать директивы `price`.",
@@ -227,6 +230,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 
 def main(argv: list[str] | None = None) -> None:
+    """Забрать котировки за период и разложить их в директивы `price`."""
     options = parse_args(argv)
     codes = [code.strip().upper() for code in options.currencies.split(",") if code.strip()]
 

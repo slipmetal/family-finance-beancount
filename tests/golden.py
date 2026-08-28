@@ -39,6 +39,8 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+# Импорты ниже — после вставки в sys.path: без неё их не найти.
+# pylint: disable=wrong-import-position
 from finance.categorize import Rules  # noqa: E402
 from finance.cli import ensure_utf8_mode  # noqa: E402
 from finance.importers import acba, ameria, sber, tbank  # noqa: E402

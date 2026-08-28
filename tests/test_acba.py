@@ -175,7 +175,6 @@ def test_account_deduplicates_by_transaction_id(account):
 
 
 def test_account_does_not_deduplicate_unrelated_entries(account):
-    first = account.extract(str(ACCOUNT), [])
     second = account.extract(str(ACCOUNT), [])
     account.deduplicate(second, [])
     assert not any("__duplicate__" in e.meta for e in second)

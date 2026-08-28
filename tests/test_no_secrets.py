@@ -69,6 +69,8 @@ def test_repository_is_not_empty():
 
 @pytest.mark.parametrize("pattern", [ACCOUNT_RE, CARD_RE], ids=["номер счёта", "маска карты"])
 def test_no_real_identifiers_in_repository(pattern):
+    """Ничто похожее на настоящий номер счёта или маску карты не должно
+    доехать до коммита — см. докстринг модуля про то, как это проверяется."""
     found: list[str] = []
     for path in repo_files():
         # Фикстура .xls двоичная, поэтому читаем как текст с заменой: номера

@@ -40,7 +40,11 @@ def transactions(entries) -> list[data.Transaction]:
 
 
 def by_narration(transactions, text: str) -> data.Transaction:
-    found = [t for t in transactions if text in (t.narration or "") or text in (t.meta.get("details") or "")]
+    found = [
+        t
+        for t in transactions
+        if text in (t.narration or "") or text in (t.meta.get("details") or "")
+    ]
     assert len(found) == 1, f"ожидалась одна проводка с {text!r}, нашлось {len(found)}"
     return found[0]
 
@@ -191,7 +195,7 @@ def test_reimport_marks_everything_as_duplicate(importer, entries, transactions)
     assert len(marked) == len(transactions)
 
 
-def test_only_the_overlapping_part_is_marked(importer, entries, rules, tmp_path):
+def test_only_the_overlapping_part_is_marked(importer, tmp_path):
     """Выписки внахлёст по датам: повторяются не все операции, а часть.
 
     Ровно ради этого случая дедуп и нужен — второй выгрузкой добираются новые
@@ -246,7 +250,7 @@ def test_unknown_currency_sign_is_rejected(rules, tmp_path):
         importer.extract(str(path), [])
 
 
-def test_currency_mismatch_with_the_account_is_rejected(rules, tmp_path):
+def test_currency_mismatch_with_the_account_is_rejected(rules):
     """Справка в рублях не должна молча записаться на драмовый счёт."""
     importer = Importer("Assets:Tbank:Amd", "AMD", TBANK_NUMBER, rules)
     with pytest.raises(ValueError, match="не совпадает с валютой счёта"):

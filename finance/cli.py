@@ -34,5 +34,6 @@ def ensure_utf8_mode() -> None:
         return
 
     env = {**os.environ, "PYTHONUTF8": "1", _RELAUNCHED: "1"}
-    completed = subprocess.run([sys.executable, *sys.argv], env=env)  # noqa: S603
+    # check=False: код возврата нужен как есть — мы его пробрасываем наружу.
+    completed = subprocess.run([sys.executable, *sys.argv], env=env, check=False)  # noqa: S603
     sys.exit(completed.returncode)

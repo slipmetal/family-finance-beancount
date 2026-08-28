@@ -76,6 +76,8 @@ def check_golden(name: str) -> None:
         capture_output=True,
         text=True,
         encoding="utf-8",
+        # check=False: падать должен assert с выводом скрипта, а не сам вызов.
+        check=False,
     )
     assert result.returncode == 0, result.stdout + result.stderr
 

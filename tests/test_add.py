@@ -24,7 +24,13 @@ ACCOUNT = AMERIA_ACCOUNT_DIR / "usd_statement.csv"
 
 
 class FakeConsole:
-    """Заранее заготовленные ответы вместо человека за клавиатурой."""
+    """Заранее заготовленные ответы вместо человека за клавиатурой.
+
+    Часть аргументов не используется намеренно: подпись обязана совпадать
+    с настоящей Console, иначе подмена ничего не проверяет.
+    """
+
+    # pylint: disable=unused-argument
 
     def __init__(self, confirms: list[bool] | None = None, choices: list[int | None] | None = None):
         self.confirms = list(confirms or [])
@@ -142,7 +148,7 @@ def test_settled_file_goes_through_without_questions(inbox, drop):
     console = FakeConsole()
 
     assert run(make(console, inbox, FakePipeline(extraction())), [source]) == 0
-    assert console.questions == []
+    assert not console.questions
     assert (inbox.directory / "statement_march.csv").exists()
 
 
@@ -167,10 +173,10 @@ def test_skipped_file_stays_where_it_was(inbox, drop):
     assert run(make(console, inbox, pipeline), [source]) == 1
     assert source.exists()
     assert not inbox.directory.exists()
-    assert pipeline.calls == []
+    assert not pipeline.calls
 
 
-def test_files_already_in_inbox_are_left_in_place(inbox, drop):
+def test_files_already_in_inbox_are_left_in_place(inbox):
     """`add` без аргументов разбирает inbox — переименовывать там нечего."""
     inbox.directory.mkdir(parents=True)
     source = copy(ACCOUNT, inbox.directory, "statement_march.csv")
@@ -190,7 +196,7 @@ def test_unknown_file_is_reported_not_guessed(inbox, drop):
 
     run(make(console, inbox, FakePipeline(extraction())), [source])
 
-    assert console.questions == []
+    assert not console.questions
     assert "не опознан" in console.said
     assert source.exists()
 
@@ -242,4 +248,4 @@ def test_no_sources_is_an_error_not_a_silent_run(inbox, tmp_path):
     pipeline = FakePipeline(extraction())
 
     assert run(make(console, inbox, pipeline), [tmp_path / "нет-такой-папки"]) == 1
-    assert pipeline.calls == []
+    assert not pipeline.calls

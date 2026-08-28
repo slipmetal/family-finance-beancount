@@ -188,7 +188,7 @@ def test_operation_key_is_the_authorisation_code(transactions):
     assert keys[0].endswith(":100001-1")
 
 
-def test_only_the_overlapping_part_is_marked(importer, transactions, tmp_path):
+def test_only_the_overlapping_part_is_marked(importer, tmp_path):
     """Выписки внахлёст: повторяются не все операции, а часть."""
     overlap = (ROWS[0], ROWS[2])
     short = build_statement(tmp_path / "short.pdf", rows=overlap)

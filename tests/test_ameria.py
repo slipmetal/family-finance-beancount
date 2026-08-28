@@ -35,7 +35,7 @@ def rules() -> Rules:
 
 
 @pytest.fixture(scope="module")
-def importer(rules) -> Importer:
+def importer(rules) -> CardImporter:
     return CardImporter(AMERIA_ACCOUNT, "AMD", rules, marker=AMERIA_MARKER)
 
 

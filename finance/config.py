@@ -155,7 +155,10 @@ def _parse_account(item: Any, *, path: Path, index: int) -> dict:
     allowed = {*BASE_KEYS, *extra_keys}
     unknown = sorted(set(item) - allowed)
     if unknown:
-        raise ConfigError(f"{where}: неизвестные поля {unknown}, для {bank!r} ожидались {sorted(allowed)}")
+        raise ConfigError(
+            f"{where}: неизвестные поля {unknown}, "
+            f"для {bank!r} ожидались {sorted(allowed)}"
+        )
 
     missing = [key for key in extra_keys if not item.get(key)]
     if missing:
