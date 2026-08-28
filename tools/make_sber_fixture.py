@@ -5,7 +5,7 @@
 
 Пишет `tests/sber/statement.pdf`. Эталон после этого перегенерировать:
 
-    python sber_test.py generate tests/sber --force
+    python tests/golden.py sber generate --force
 
 Как и фикстура Т-Банка, рисуется с нуля: настоящая выписка не участвует, поиск
 шрифта и причины такого решения описаны в tools/make_tbank_fixture.py — здесь
@@ -328,4 +328,4 @@ if __name__ == "__main__":
     used = register_font(needed_characters())
     written = build_statement(OUT)
     print(f"{written.relative_to(ROOT)}: {len(ROWS)} операций, шрифт {used}")
-    print("Дальше: python sber_test.py generate tests/sber --force", file=sys.stderr)
+    print("Дальше: python tests/golden.py sber generate --force", file=sys.stderr)
