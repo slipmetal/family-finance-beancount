@@ -19,7 +19,7 @@ import yaml
 from finance import config
 from finance.fava_upload import UploadStatements, describe
 from tests.conftest import ACCOUNTS, copy
-from tests.fixtures import AMERIA_ACCOUNT_DIR, AMERIA_CARD_DIR
+from tests.fixtures import AMERIA_ACCOUNT_DIR, AMERIA_CARD_DIR, RULES
 
 CARD = AMERIA_CARD_DIR / "card0001_statement.csv"
 ACCOUNT = AMERIA_ACCOUNT_DIR / "usd_statement.csv"
@@ -38,8 +38,12 @@ def page(tmp_path, monkeypatch):
     inbox.mkdir()
     accounts = tmp_path / "accounts.yaml"
     accounts.write_text(yaml.safe_dump({"accounts": ACCOUNTS}, allow_unicode=True), "utf-8")
+    # Все три пути, по которым страница собирает раскладку. RULES ведёт
+    # к боевым правилам рядом с леджером, а его в CI нет вовсе — подменяются
+    # они не для изоляции, а чтобы тест вообще мог работать без него.
     monkeypatch.setattr(config, "INBOX", inbox)
     monkeypatch.setattr(config, "ACCOUNTS", accounts)
+    monkeypatch.setattr(config, "RULES", RULES)
 
     ledger_dir = tmp_path / "ledger"
     ledger_dir.mkdir()
