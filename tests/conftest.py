@@ -15,6 +15,7 @@ from pathlib import Path
 import pytest
 import yaml
 
+from finance import config
 from finance.categorize import Rules
 from finance.config import build_importers, load_accounts
 from finance.inbox import Account, Inbox
@@ -57,6 +58,34 @@ def inbox(tmp_path, rules) -> Inbox:
         for importer, spec in zip(importers, specs, strict=True)
     ]
     return Inbox(accounts, tmp_path / "inbox")
+
+
+@pytest.fixture
+def finance_env(tmp_path, monkeypatch) -> Path:
+    """Подменить все три пути, по которым собирается раскладка.
+
+    Нужно всем, кто зовёт `Inbox.build()` — она читает config в момент вызова.
+    RULES ведёт к боевым правилам рядом с леджером, а его в CI нет вовсе, так
+    что подмена здесь не ради изоляции, а чтобы тест вообще мог работать.
+    Возвращается папка inbox: с ней тесты и имеют дело.
+
+    Проверяется это так — леджер никуда не девается, просто конфиг смотрит
+    мимо него: FINANCE_LEDGER=нет-такого pytest.
+    """
+    directory = tmp_path / "inbox"
+    directory.mkdir()
+    accounts = tmp_path / "accounts.yaml"
+    accounts.write_text(
+        yaml.safe_dump({"accounts": ACCOUNTS}, allow_unicode=True), encoding="utf-8"
+    )
+    monkeypatch.setattr(config, "INBOX", directory)
+    monkeypatch.setattr(config, "ACCOUNTS", accounts)
+    monkeypatch.setattr(config, "RULES", RULES)
+    monkeypatch.setattr(config, "OUT", tmp_path / "out.beancount")
+    # Иначе бот завёл бы себе секрет вебхука на настоящем диске: RUN на
+    # сервере указывает на том, а в тесте ему место только во временной папке.
+    monkeypatch.setattr(config, "RUN", tmp_path / "run")
+    return directory
 
 
 def check_golden(name: str) -> None:

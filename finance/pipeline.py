@@ -20,6 +20,7 @@ from __future__ import annotations
 import re
 import subprocess
 import sys
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -60,6 +61,18 @@ class Extraction(Step):
     #: Проводки, под которые не подошло ни одно правило. Их и смотрят глазами.
     uncategorized: list[data.Transaction] = field(default_factory=list)
 
+    @staticmethod
+    def line(txn: data.Transaction) -> str:
+        """Одна проводка в одну строку: дата, кто, сколько.
+
+        Здесь, а не у того, кто показывает: показывают её и терминал, и чат,
+        и колонки в обоих должны сойтись одинаково.
+        """
+        units = txn.postings[0].units if txn.postings else None
+        amount = f"{units.number:>12,.2f} {units.currency}" if units else ""
+        who = txn.payee or txn.narration or ""
+        return f"{txn.date} {who[:40]:<40} {amount}"
+
     @property
     def empty(self) -> bool:
         """Разбирать нечего: всё, что было в inbox, уже в леджере."""
@@ -85,7 +98,7 @@ class Pipeline:
         self.inbox = inbox or config.INBOX
         self.ledger = ledger or config.LEDGER
         self.documents = documents or config.DOCUMENTS
-        self.out = out or ROOT / "out.beancount"
+        self.out = out or config.OUT
         self.uncategorized = uncategorized
 
     @property
@@ -157,6 +170,29 @@ class Pipeline:
         if len(errors) > 20:
             shown += f"\n… и ещё {len(errors) - 20}"
         return Step("Проверка леджера", False, shown)
+
+    def finish(self, *, replace: bool = False) -> Iterator[Step]:
+        """Всё после разбора: перенос, курсы, архив, проверка. До первой неудачи.
+
+        Генератором, а не списком готовых шагов: шаг выполняется только тогда,
+        когда его забирают, и после неудачного следующего не будет. Особенно
+        важно для архива — он уносит выписки из inbox, и делать это после
+        несостоявшегося переноса нельзя: они уедут, так и не попав в леджер.
+
+        Порядок и остановка живут здесь, а не у вызывающего. Вызывающих двое —
+        `import.py add` и бот в Telegram, — и разъехаться им негде.
+        """
+        steps = (
+            lambda: self.merge(replace=replace),
+            self.rates,
+            self.archive,
+            self.check,
+        )
+        for run_step in steps:
+            step = run_step()
+            yield step
+            if step.failed:
+                return
 
     # ────────────────────────────── запуск ──────────────────────────────
 

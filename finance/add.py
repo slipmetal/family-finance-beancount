@@ -22,11 +22,10 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Iterable
 from pathlib import Path
 
 import click
-from beancount.core import data
 
 from finance.categorize import Rules
 from finance.config import RULES
@@ -118,18 +117,7 @@ class AddCommand:
             )
             return 0
 
-        # Шаги передаются невыполненными: первый же провал должен остановить
-        # остальные. Особенно важно для архива — он уносит выписки из inbox,
-        # и делать это после несостоявшегося переноса нельзя.
-        return self._finish(
-            [
-                lambda: self.pipeline.merge(replace=replace),
-                self.pipeline.rates,
-                self.pipeline.archive,
-                self.pipeline.check,
-            ],
-            skipped,
-        )
+        return self._finish(self.pipeline.finish(replace=replace), skipped)
 
     # ──────────────────────────── раскладка файлов ────────────────────────────
 
@@ -221,7 +209,7 @@ class AddCommand:
 
         self.console.warn(f"Без категории: {len(extraction.uncategorized)}")
         for txn in extraction.uncategorized[:SHOWN]:
-            self.console.say(f"  {self._line(txn)}")
+            self.console.say(f"  {Extraction.line(txn)}")
         if len(extraction.uncategorized) > SHOWN:
             self.console.say(f"  … и ещё {len(extraction.uncategorized) - SHOWN}")
         self.console.say(
@@ -229,18 +217,14 @@ class AddCommand:
             "правило в rules.yaml и запустить снова."
         )
 
-    @staticmethod
-    def _line(txn: data.Transaction) -> str:
-        """Одна проводка в одну строку: дата, кто, сколько."""
-        units = txn.postings[0].units if txn.postings else None
-        amount = f"{units.number:>12,.2f} {units.currency}" if units else ""
-        who = txn.payee or txn.narration or ""
-        return f"{txn.date} {who[:40]:<40} {amount}"
+    def _finish(self, steps: Iterable[Step], skipped: list[Path]) -> int:
+        """Прогнать оставшиеся шаги, рассказывая о каждом.
 
-    def _finish(self, steps: list[Callable[[], Step]], skipped: list[Path]) -> int:
+        Шаги приходят ленивым перебором из Pipeline.finish: он же следит за
+        порядком и обрывает цепочку на первой неудаче.
+        """
         self.console.say()
-        for run_step in steps:
-            step = run_step()
+        for step in steps:
             if step.failed:
                 self.console.fail(f"{step.name}: не получилось")
                 if step.output:

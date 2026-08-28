@@ -5,10 +5,15 @@
 testpaths = ["tests"]
 # Чтобы `import finance...` работал из тестов без установки пакета.
 pythonpath = ["."]
+# Бот асинхронный, и его тесты — корутины. В auto-режиме их не нужно
+# помечать: у нас нет ни одного асинхронного теста, который был бы не про бота.
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 
 # ─────────────────────────────── pylint ───────────────────────────────
 #
-# Запуск: python -m pylint finance tools tests import.py fava_import_config.py fava_ext.py
+# Запуск: python -m pylint finance tools tests import.py bot.py fava_import_config.py
+#         fava_ext.py deploy/entrypoint.py
 # То же самое делает CI, см. .github/workflows/ci.yml.
 
 [tool.pylint.main]

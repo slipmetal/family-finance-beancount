@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import pytest
 
-from finance.inbox import InboxError
+from finance.inbox import NAME_LIMIT, InboxError, plain_name
 from tests.conftest import account_named, copy
 from tests.fixtures import ACBA_CARD_DIR, AMERIA_ACCOUNT_DIR, AMERIA_CARD_DIR
 
@@ -136,3 +136,32 @@ def test_place_refuses_a_file_it_cannot_make_unambiguous(inbox, tmp_path):
 
     with pytest.raises(InboxError, match="однозначным"):
         inbox.place(garbage, account_named(inbox, "Assets:Ameria:Card0001"))
+
+
+# ───────────────────────────── имя со стороны ─────────────────────────────
+#
+# Имя файла приходит извне — из формы в браузере или из чата, — и доверять
+# ему нельзя ни в части путей, ни в части длины.
+
+
+def test_plain_name_keeps_the_name_recognisable():
+    assert plain_name("statement_march.csv") == "statement_march.csv"
+
+
+def test_plain_name_has_no_path_left_in_it():
+    """Разделители заменяются пробелом, а не вырезаются: имя должно остаться
+    узнаваемым, и ровно так же поступает штатная загрузка fava."""
+    assert plain_name("../../etc/passwd.csv") == ".. .. etc passwd.csv"
+
+
+def test_plain_name_shortens_a_long_name_but_keeps_the_extension():
+    """По расширению импортёры выбирают, чем читать файл, — терять его нельзя."""
+    plain = plain_name("о" * 300 + ".csv")
+
+    assert len(plain) <= NAME_LIMIT
+    assert plain.endswith(".csv")
+
+
+def test_plain_name_survives_a_name_that_is_only_separators():
+    """Пустое имя сломало бы всё дальнейшее, поэтому его не бывает."""
+    assert plain_name("///") == "statement"

@@ -33,6 +33,15 @@ INBOX = Path(os.environ.get("FINANCE_INBOX") or ROOT / "inbox")
 DOCUMENTS = Path(os.environ.get("FINANCE_DOCUMENTS") or ROOT / "documents")
 RULES = Path(os.environ.get("FINANCE_RULES") or LEDGER / "rules.yaml")
 ACCOUNTS = Path(os.environ.get("FINANCE_ACCOUNTS") or LEDGER / "accounts.yaml")
+#: Куда `extract` складывает разобранное до переноса в леджер. Рядом с кодом
+#: это удобно — файл на виду и открывается редактором. На сервере так нельзя:
+#: там код лежит в слое образа, который пересоздаётся при каждом деплое, а
+#: между разбором и подтверждением переноса может пройти сколько угодно
+#: времени — машина успевает и заснуть, и обновиться.
+OUT = Path(os.environ.get("FINANCE_OUT") or ROOT / "out.beancount")
+#: Рабочее бота: секрет вебхука, замок импорта, память о виденных апдейтах.
+#: Ничего из этого не переживает пересборку образа, поэтому на сервере — том.
+RUN = Path(os.environ.get("FINANCE_RUN") or ROOT / ".run")
 
 
 class ConfigError(Exception):

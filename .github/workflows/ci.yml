@@ -45,7 +45,9 @@ jobs:
 
       # Настройки — в pyproject.toml, включая то, что отключено и почему.
       # Список путей повторяет README: линтуется всё, что мы написали сами.
-      - run: pylint finance tools tests import.py fava_import_config.py fava_ext.py
+      - run: >
+          pylint finance tools tests import.py bot.py fava_import_config.py
+          fava_ext.py deploy/entrypoint.py
 
   deploy:
     # Выкатывается только то, что прошло и тесты, и линтер: деплой идёт сразу

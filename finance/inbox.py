@@ -8,7 +8,12 @@
 
 Модуль ничего не спрашивает и ничего не печатает: он только отвечает, кто из
 счетов возьмёт файл и кто взял бы его после переименования. Спрашивает
-вызывающий — у CLI это вопрос в терминале, у бота были бы кнопки в чате.
+вызывающий — у CLI это вопрос в терминале, у страницы в fava выпадающий
+список, у бота кнопки в чате.
+
+Оговорка к этому — `describe()` в конце модуля: он пересказывает вердикт
+фразой для человека. Печатать её всё так же некому, а вот совпадать у всех
+троих она обязана — потому и живёт здесь, а не в каждом интерфейсе своя.
 
 Про какой файл кому достанется, здесь не рассуждают, а спрашивают у самих
 импортёров тем же вопросом, который задаст импорт: копия файла под подходящим
@@ -21,7 +26,7 @@ from __future__ import annotations
 import shutil
 import tempfile
 from collections.abc import Iterator
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -207,3 +212,72 @@ class Inbox:
             target = self.directory / f"{stem}-{number}{suffix}"
             number += 1
         return target
+
+
+# ───────────────────────── пересказ для человека ─────────────────────────
+
+
+@dataclass(frozen=True)
+class Row:
+    """Что показать про один файл: кому достанется и чего ему не хватает."""
+
+    name: str
+    #: Счёт, которому файл достанется прямо сейчас. Пусто — не определился.
+    account: str = ""
+    #: Из чего выбирать, если счёт можно назначить переименованием.
+    choices: list[str] = field(default_factory=list)
+    #: Что не так, если выбирать не из чего.
+    problem: str = ""
+
+    @property
+    def settled(self) -> bool:
+        """Счёт известен, спрашивать нечего."""
+        return bool(self.account)
+
+
+def describe(inbox: Inbox, path: Path) -> Row:
+    """Пересказать вердикт раскладки словами, которые можно показать человеку.
+
+    Функцией, а не методом: пересказ нужен всем трём интерфейсам одинаковый,
+    и проверять его удобнее без веб-обвязки вокруг.
+    """
+    verdict = inbox.verdict(path)
+    if verdict.settled:
+        return Row(path.name, account=verdict.owners[0].name)
+    if verdict.disputed:
+        claimants = ", ".join(owner.name for owner in verdict.owners)
+        return Row(
+            path.name,
+            problem=f"забирают сразу несколько счетов ({claimants}) — "
+            "на таком падает и импорт, уберите из имени лишнюю метку",
+        )
+    if verdict.unknown:
+        return Row(
+            path.name,
+            # Не всегда беда: ACBA отдаёт по каждому счёту два файла, и один
+            # из них импортёру не нужен — он и лежит здесь неопознанным.
+            problem="ни один импортёр его не берёт — это либо не выписка, "
+            "либо лишний файл из той же выгрузки",
+        )
+    return Row(path.name, choices=[account.name for account in verdict.candidates])
+
+
+#: Сколько символов имени переживает загрузку. Имя приходит извне — из формы
+#: в браузере или из чата, — и трёхсотсимвольное сломало бы `_free_path`.
+NAME_LIMIT = 80
+
+
+def plain_name(filename: str) -> str:
+    """Только имя файла: без путей и разумной длины.
+
+    Разделители заменяются пробелом, а не вырезаются, чтобы имя осталось
+    узнаваемым, — так же поступает и штатная загрузка fava. Расширение
+    сохраняется: по нему импортёры выбирают, чем читать файл.
+    """
+    plain = filename.replace("/", " ").replace("\\", " ").strip()
+    if not plain:
+        return "statement"
+    stem, dot, suffix = plain.rpartition(".")
+    if not dot or len(suffix) > 8:  # точки нет или это не расширение
+        return plain[:NAME_LIMIT]
+    return stem[: NAME_LIMIT - len(suffix) - 1] + "." + suffix

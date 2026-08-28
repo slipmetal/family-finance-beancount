@@ -23,6 +23,7 @@ import subprocess
 import sys
 import threading
 import time
+from dataclasses import dataclass
 from pathlib import Path
 
 APP = Path("/app")
@@ -30,8 +31,18 @@ DATA = Path(os.environ.get("FINANCE_DATA", "/data"))
 LEDGER = DATA / "ledger"
 INBOX = DATA / "inbox"
 AUTH = DATA / "auth"
+#: Куда `archive` уносит разобранные выписки. Лежит ВЫШЕ корня репозитория
+#: (LEDGER), поэтому оригиналы физически не могут попасть в коммит — та же
+#: защита, что и у auth/ с inbox/, см. setup_git().
+DOCUMENTS = DATA / "documents"
+#: Рабочее бота: секрет вебхука, замок импорта, память о виденных апдейтах.
+RUN = DATA / "run"
 
 FAVA_PORT = "5000"
+BOT_PORT = "5001"
+#: Сколько секунд придерживать остановку, пока идёт импорт. Должно быть
+#: заметно меньше kill_timeout из fly.toml — иначе нас добьют на середине.
+IMPORT_GRACE = 60
 #: Как часто складывать изменения леджера в коммит.
 SYNC_INTERVAL = int(os.environ.get("LEDGER_SYNC_SECONDS", "900"))
 #: Сколько живёт сессия портала, секунды. Сутки: у входа появилась кнопка
@@ -52,7 +63,7 @@ def run(*args: str, cwd: Path | None = None, check: bool = True) -> subprocess.C
 
 def prepare_dirs() -> None:
     """Создать каталоги на томе. Леджер и ссылки здесь НЕ трогаем."""
-    for path in (DATA, INBOX, AUTH):
+    for path in (DATA, INBOX, AUTH, DOCUMENTS, RUN):
         path.mkdir(parents=True, exist_ok=True)
 
 
@@ -349,6 +360,7 @@ def setup_git() -> None:
 
 
 def sync_once() -> None:
+    """Сложить изменения леджера в коммит и отправить в репозиторий."""
     # Репозиторий укоренён в самом каталоге леджера, поэтому `add -A` не может
     # захватить ничего лишнего: секреты и выписки лежат выше по дереву.
     status = run("git", "status", "--porcelain", cwd=LEDGER, check=False)
@@ -365,18 +377,101 @@ def sync_once() -> None:
 
 
 def sync_loop() -> None:
+    """Складывать изменения в коммит раз в SYNC_INTERVAL, что бы ни случилось."""
     while True:
         time.sleep(SYNC_INTERVAL)
         try:
+            # pylint: disable=broad-exception-caught
+            # Фоновый цикл не должен ронять контейнер: любая его беда стоит
+            # строчки в логе, но не остановки fava.
             sync_once()
-        except Exception as error:  # noqa: BLE001 — фоновый цикл не должен ронять контейнер
+        except Exception as error:  # noqa: BLE001
             log(f"ошибка синхронизации: {error}")
+
+
+# ─────────────────────────────── дети ───────────────────────────────
+
+
+@dataclass
+class Child:
+    """Дочерний процесс под присмотром. Имя нужно только для лога."""
+
+    name: str
+    process: subprocess.Popen
+
+
+#: Порядок важен: останавливаем в обратном, чтобы парадная дверь закрылась
+#: раньше того, что за ней. Раньше этот порядок был записан руками в трёх
+#: местах сразу, и третий процесс стал поводом свести его в одно.
+CHILDREN: list[Child] = []
+
+
+def spawn(name: str, command: list[str], extra: dict[str, str] | None = None) -> None:
+    """Поднять ребёнка и поставить его под присмотр."""
+    # pylint: disable=consider-using-with
+    # Процессы живут до самой остановки контейнера, а `with` закрыл бы их
+    # на выходе из блока. Останавливает их shutdown(), и только он.
+    process = subprocess.Popen(command, env={**os.environ, **(extra or {})})
+    CHILDREN.append(Child(name, process))
+
+
+def telegram_env() -> dict[str, str] | None:
+    """Окружение для бота — или None, и тогда бота просто не будет.
+
+    В отличие от write_auth_config здесь нет sys.exit: fava основная, бот
+    дополнительный, и опечатка в его переменных не повод оставить семью без
+    леджера. Всё, чего не хватило, проговаривается в лог.
+    """
+    if not os.environ.get("TELEGRAM_TOKEN", "").strip():
+        log("TELEGRAM_TOKEN не задан — бот в Telegram не поднимается")
+        return None
+
+    sys.path.insert(0, str(APP))
+    try:
+        from finance.bot.settings import Settings, SettingsError  # noqa: PLC0415
+    except ImportError as error:  # aiogram не установлен — не беда, но и не бот
+        log(f"бот не поднимается: {error}")
+        return None
+
+    try:
+        Settings.load()
+    except SettingsError as error:
+        log(f"бот не поднимается: {error}")
+        return None
+
+    return {
+        "FINANCE_INBOX": str(INBOX),
+        "FINANCE_DOCUMENTS": str(DOCUMENTS),
+        "FINANCE_RUN": str(RUN),
+        "TELEGRAM_PORT": BOT_PORT,
+    }
+
+
+def wait_for_import() -> None:
+    """Дождаться конца импорта, если он идёт.
+
+    fly не знает про фоновую работу: нагрузкой он считает только входящие
+    запросы, и усыпить машину посреди переноса ему ничто не мешает. Зато
+    сигнал приходит сюда, а не боту, и до KILL у нас есть kill_timeout из
+    fly.toml. Этим и пользуемся: пока лежит замок, останавливаться рано.
+    """
+    lock = RUN / "import.lock"
+    if not lock.exists():
+        return
+    log("идёт импорт, придерживаю остановку")
+    for _ in range(IMPORT_GRACE):
+        time.sleep(1)
+        if not lock.exists():
+            log("импорт закончился")
+            return
+    log("импорт не закончился за отведённое время, останавливаюсь")
 
 
 # ─────────────────────────────── запуск ───────────────────────────────
 
 
 def main() -> None:
+    """Подготовить том, поднять процессы и присматривать за ними до конца."""
     prepare_dirs()
     # Репозиторий раньше засева: иначе на новом томе копия из образа перекрыла
     # бы актуальный леджер, который лежит в git.
@@ -392,18 +487,19 @@ def main() -> None:
         threading.Thread(target=sync_loop, daemon=True).start()
         log(f"синхронизация с git каждые {SYNC_INTERVAL} с")
 
-    fava = subprocess.Popen(
-        [
-            "fava",
-            "--host", "127.0.0.1",
-            "--port", FAVA_PORT,
-            str(LEDGER / "main.beancount"),
-        ],
-        env={**os.environ, "FINANCE_INBOX": str(INBOX)},
+    spawn(
+        "fava",
+        ["fava", "--host", "127.0.0.1", "--port", FAVA_PORT, str(LEDGER / "main.beancount")],
+        {"FINANCE_INBOX": str(INBOX)},
     )
     log(f"fava поднята на 127.0.0.1:{FAVA_PORT}")
 
-    caddy = subprocess.Popen(["caddy", "run", "--config", "/app/deploy/Caddyfile"])
+    bot_env = telegram_env()
+    if bot_env:
+        spawn("бот", [sys.executable, str(APP / "bot.py")], bot_env)
+        log(f"бот Telegram слушает 127.0.0.1:{BOT_PORT}")
+
+    spawn("caddy", ["caddy", "run", "--config", "/app/deploy/Caddyfile"])
     log("caddy принимает запросы на :8080")
 
     stopping = threading.Event()
@@ -413,14 +509,17 @@ def main() -> None:
             return
         stopping.set()
         log(f"получен сигнал {signum}, останавливаюсь")
+        # Импорт дописывается до конца: он пишет в леджер, и обрыв на середине
+        # оставил бы выписки разобранными наполовину.
+        wait_for_import()
         # Досинхронизировать НАДО до остановки: fly усыпляет машину, когда
         # запросов нет, и это запросто случается сразу после того, как человек
         # сохранил импорт. Без этого правка ждала бы следующего тика.
         if git_available():
             sync_once()
-        for process in (caddy, fava):
-            if process.poll() is None:
-                process.terminate()
+        for child in reversed(CHILDREN):
+            if child.process.poll() is None:
+                child.process.terminate()
 
     signal.signal(signal.SIGTERM, shutdown)
     signal.signal(signal.SIGINT, shutdown)
@@ -429,19 +528,19 @@ def main() -> None:
     # вместе с ним, и досинхронизации при остановке не будет. Заодно падение
     # любого из двух процессов роняет контейнер, и fly поднимает его заново.
     while not stopping.is_set():
-        for name, process in (("caddy", caddy), ("fava", fava)):
-            code = process.poll()
+        for child in CHILDREN:
+            code = child.process.poll()
             if code is not None:
-                log(f"{name} завершился с кодом {code}, останавливаю остальное")
-                shutdown(f"выход {name}", None)
+                log(f"{child.name} завершился с кодом {code}, останавливаю остальное")
+                shutdown(f"выход {child.name}", None)
                 sys.exit(code or 1)
         time.sleep(1)
 
-    for process in (caddy, fava):
+    for child in reversed(CHILDREN):
         try:
-            process.wait(timeout=10)
+            child.process.wait(timeout=10)
         except subprocess.TimeoutExpired:
-            process.kill()
+            child.process.kill()
     sys.exit(0)
 
 
