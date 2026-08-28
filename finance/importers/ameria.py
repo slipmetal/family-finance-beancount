@@ -26,9 +26,17 @@
     и банкомат, и комиссии. Категории подбираются по `Transaction details`
     правилами из rules.yaml, а тип уходит в метаданные.
 
-Общее у обоих: **номера счёта в файле нет**, поэтому счёт определяется меткой
-в имени файла. Метка, а не папка: fava кладёт всё загруженное через браузер
-в одну папку, и выписка второго счёта молча досталась бы первому.
+Общее у обоих: **номера счёта в файле нет**, поэтому счёт в общем случае
+определяется меткой в имени файла. Метка, а не папка: fava кладёт всё
+загруженное через браузер в одну папку, и выписка второго счёта молча
+досталась бы первому.
+
+Метка нужна не всегда. Кое-что о счёте в файле всё-таки есть — код валюты
+в карточной выписке и хвост номера в описании процентов в выписке по счёту, —
+и если этого хватает, чтобы отличить счёт от остальных счетов Ameriabank
+в accounts.yaml, импортёр опознаёт свой файл как угодно названным. Считает это
+finance/config.py и передаёт сюда флагом `marker_optional`: одному импортёру
+такое не решить, ему не видны соседи.
 """
 
 from __future__ import annotations
@@ -111,11 +119,15 @@ class CardImporter(csvbase.Importer):
         rules: Rules,
         *,
         marker: str,
+        marker_optional: bool = False,
         flag: str = flags.FLAG_OKAY,
     ):
         super().__init__(account, currency, flag)
         self.rules = rules
         self.marker = marker.lower()
+        # Считает finance/config.py: ему видны все счета сразу, а по одному
+        # счёту узнать, единственный ли он в своей валюте, нельзя.
+        self.marker_optional = marker_optional
 
     @property
     def name(self) -> str:
@@ -124,30 +136,40 @@ class CardImporter(csvbase.Importer):
         return f"ameria.{self.marker}"
 
     def identify(self, filepath: str) -> bool:
-        """Опознать файл по метке в имени, шапке и валюте.
+        """Опознать файл по шапке, метке в имени и валюте.
 
-        В выписке Ameriabank нет ни номера счёта, ни номера карты, поэтому два
-        драмовых счёта различимы только по тому, как назван файл: имя должно
-        содержать метку счёта (`card6718`, `card7080`, `rub`).
+        В выписке Ameriabank нет ни номера счёта, ни номера карты, и валюта —
+        единственный признак счёта, который лежит в самом файле. Поэтому две
+        карты в одной валюте различимы только по тому, как назван файл: имя
+        должно содержать метку счёта (`card6718`, `card7080`).
 
         Раньше вместо метки использовалась папка, но это несовместимо с
         загрузкой через браузер: fava кладёт любой загруженный файл в одну и ту
         же папку, и выписка второй карты молча досталась бы первой.
 
-        Валюта — подстраховка на случай ошибки в метке. Проверять содержимое
-        обязательно: beangulp падает, если один файл опознали два импортёра.
+        А карта, чья валюта в accounts.yaml единственная, опознаёт себя сама,
+        и переименовывать её выписку незачем — про это и говорит
+        `marker_optional`. Требование к содержимому тогда строже: с меткой
+        валюта имеет право вето (у пустой выписки её не узнать, и мы верим
+        имени файла), без метки — обязана подтвердиться. Иначе пустая выписка
+        досталась бы первому же счёту, у которого метка необязательна.
         """
         path = Path(filepath)
         if path.suffix.lower() != ".csv":
             return False
-        if self.marker not in path.name.lower():
+
+        named = self.marker in path.name.lower()
+        # Файл, названный не нами, и читать незачем — он либо чужой, либо
+        # безымянный, и во втором случае нас спасёт только уникальная валюта.
+        if not named and not self.marker_optional:
             return False
 
         header, currency = self._peek(path)
         if header != COLUMNS:
             return False
-        # Валюта — право вето, а не требование: у пустой выписки её не узнать.
-        return currency is None or currency == self.currency
+        if named:
+            return currency is None or currency == self.currency
+        return currency == self.currency
 
     def _peek(self, path: Path) -> tuple[tuple[str, ...] | None, str | None]:
         """Прочитать шапку и валюту первой строки, не разбирая файл целиком."""
@@ -262,12 +284,23 @@ class AccountImporter(beangulp.Importer):
 
     encoding = "utf-8-sig"
 
-    def __init__(self, account: str, currency: str, rules: Rules, *, marker: str, number: str = ""):
+    def __init__(
+        self,
+        account: str,
+        currency: str,
+        rules: Rules,
+        *,
+        marker: str,
+        number: str = "",
+        marker_optional: bool = False,
+    ):
         self.importer_account = account
         self.currency = currency
         self.rules = rules
         self.marker = marker.lower()
         self.number = number
+        # Считает finance/config.py — см. CardImporter.
+        self.marker_optional = marker_optional
 
     @property
     def name(self) -> str:
@@ -276,27 +309,39 @@ class AccountImporter(beangulp.Importer):
         return f"ameria-account.{self.marker}"
 
     def identify(self, filepath: str) -> bool:
-        """Опознать файл по метке в имени, шапке и хвосту номера счёта.
+        """Опознать файл по шапке, метке в имени и хвосту номера счёта.
 
-        Номера счёта в файле нет — как и в карточной выписке, — поэтому метка
-        в имени обязательна. Но в описании процентов банк печатает последние
-        цифры счёта, и если они нашлись, то работают как право вето: ошиблись
-        меткой — файл не опознается вместо того, чтобы уехать не на тот счёт.
+        Номера счёта в файле нет — как и в карточной выписке, — а валюты в этом
+        формате нет вовсе: ни колонки, ни кода в сумме. Единственный признак
+        счёта внутри файла — хвост номера, который банк печатает в описании
+        начисленных процентов, и тот появляется не в каждой выписке.
 
-        Вето, а не требование: в выписке за период без начисления процентов
-        номера нет вообще, да и номер счёта в accounts.yaml необязателен.
+        С меткой в имени хвост работает правом вето: нашёлся и не сошёлся —
+        файл не опознаётся, вместо того чтобы уехать не на тот счёт. Не нашёлся
+        — верим метке, иначе выписка за месяц без процентов не импортировалась
+        бы вовсе.
+
+        Без метки наоборот: хвост обязан найтись и сойтись. Тогда файл можно не
+        переименовывать — но только если по последним цифрам номера этот счёт
+        отличается от остальных счетов Ameriabank, о чём и говорит
+        `marker_optional` (считает finance/config.py).
         """
         path = Path(filepath)
         if path.suffix.lower() != ".csv":
             return False
-        if self.marker not in path.name.lower():
+
+        named = self.marker in path.name.lower()
+        if not named and not self.marker_optional:
             return False
 
         rows = _read(path, self.encoding)
         if rows is None or tuple(name.strip() for name in rows[0]) != ACCOUNT_COLUMNS:
             return False
+
         tail = _account_tail(rows[1:])
-        return tail is None or not self.number or self.number.endswith(tail)
+        if named:
+            return tail is None or not self.number or self.number.endswith(tail)
+        return bool(self.number) and tail is not None and self.number.endswith(tail)
 
     def account(self, filepath: str) -> str:
         return self.importer_account

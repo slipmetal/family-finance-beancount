@@ -132,6 +132,47 @@ def test_veto_is_not_a_requirement(rules, tmp_path):
     assert imp.identify(str(path))
 
 
+def test_number_in_the_file_identifies_it_without_a_marker(rules, tmp_path):
+    """Хвост номера из описания процентов заменяет метку, если счёт по нему
+    отличается от остальных. Такую выписку переименовывать не нужно."""
+    raw = STATEMENT.read_text(encoding="utf-8")
+    plain = tmp_path / "export_00000000000000000001.csv"
+    plain.write_text(raw, encoding="utf-8")
+
+    mine = AccountImporter(
+        AMERIA_SAVINGS_ACCOUNT, "USD", rules,
+        marker=AMERIA_SAVINGS_MARKER, number=AMERIA_SAVINGS_NUMBER, marker_optional=True,
+    )
+    assert mine.identify(str(plain))
+
+    stranger = AccountImporter(
+        "Assets:Ameria:Other", "USD", rules,
+        marker="other", number="1000000000000000", marker_optional=True,
+    )
+    assert not stranger.identify(str(plain))
+
+
+def test_statement_without_interest_still_needs_a_marker(rules, tmp_path):
+    """Без процентов о счёте в файле нет ничего — валюты в этом формате тоже.
+
+    С меткой такой файл опознаётся (см. test_veto_is_not_a_requirement),
+    без метки — не должен: подтвердить его нечем.
+    """
+    lines = STATEMENT.read_text(encoding="utf-8").splitlines()
+    without = "\n".join([lines[0]] + [x for x in lines[1:] if "ըստ" not in x]) + "\n"
+    named = tmp_path / "usd_no_interest.csv"
+    named.write_text(without, encoding="utf-8")
+    plain = tmp_path / "export_00000000000000000002.csv"
+    plain.write_text(without, encoding="utf-8")
+
+    imp = AccountImporter(
+        AMERIA_SAVINGS_ACCOUNT, "USD", rules,
+        marker=AMERIA_SAVINGS_MARKER, number=AMERIA_SAVINGS_NUMBER, marker_optional=True,
+    )
+    assert imp.identify(str(named))
+    assert not imp.identify(str(plain))
+
+
 def test_broken_file_is_not_identified(importer, tmp_path):
     garbage = tmp_path / "usd_garbage.csv"
     garbage.write_text("не то и не в том формате\n", encoding="utf-8")

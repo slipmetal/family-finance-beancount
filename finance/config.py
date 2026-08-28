@@ -13,6 +13,7 @@
 from __future__ import annotations
 
 import os
+from collections import Counter
 from pathlib import Path
 from typing import Any, Callable
 
@@ -40,7 +41,8 @@ BANKS: dict[str, tuple[tuple[str, ...], Callable[[dict, Rules], Any]]] = {
     "ameria": (
         ("marker",),
         lambda spec, rules: ameria.CardImporter(
-            spec["account"], spec["currency"], rules, marker=spec["marker"]
+            spec["account"], spec["currency"], rules,
+            marker=spec["marker"], marker_optional=spec.get(MARKER_OPTIONAL, False),
         ),
     ),
     # Метка нужна, потому что номера счёта в файле нет; номер — потому что
@@ -51,6 +53,7 @@ BANKS: dict[str, tuple[tuple[str, ...], Callable[[dict, Rules], Any]]] = {
         lambda spec, rules: ameria.AccountImporter(
             spec["account"], spec["currency"], rules,
             marker=spec["marker"], number=spec["number"],
+            marker_optional=spec.get(MARKER_OPTIONAL, False),
         ),
     ),
     "acba-card": (
@@ -80,6 +83,16 @@ BANKS: dict[str, tuple[tuple[str, ...], Callable[[dict, Rules], Any]]] = {
 }
 
 BASE_KEYS = ("bank", "account", "currency")
+
+#: Служебное поле, которое build_importers дописывает в spec перед сборкой.
+#: В accounts.yaml его не пишут — оно вычисляется по всему списку счетов.
+MARKER_OPTIONAL = "marker_optional"
+
+#: Сколько цифр номера счёта минимум печатает Ameriabank в описании процентов —
+#: см. ACCOUNT_TAIL_RE в finance/importers/ameria.py. Импортёр сверяет номер
+#: с хвостом такой длины, значит два счёта, у которых совпадают последние шесть
+#: цифр, по содержимому выписки неразличимы.
+AMERIA_TAIL = 6
 
 
 def load_accounts(path: Path | None = None) -> list[dict]:
@@ -156,6 +169,47 @@ def _parse_account(item: Any, *, path: Path, index: int) -> dict:
     return {**item, **{key: str(item[key]) for key in extra_keys}}
 
 
+def optional_markers(specs: list[dict]) -> set[str]:
+    """Счета Ameriabank, выписку которых можно не переименовывать.
+
+    Метка в имени файла нужна там, где счёт неотличим по содержимому выписки:
+    номера счёта Ameriabank в файл не кладёт. Но кое-что кладёт, и если этого
+    хватает, чтобы отличить счёт от ОСТАЛЬНЫХ счетов того же формата, метка
+    становится необязательной.
+
+    Что служит признаком, зависит от формата (см. finance/importers/ameria.py):
+
+    * карточная выписка — код валюты в сумме. Значит две карты в AMD метку
+      требуют, а единственная карта в RUB — нет;
+    * выписка по счёту — хвост номера в описании процентов. Валюты в этом
+      формате нет вообще, поэтому счета сравниваются по номерам.
+
+    Считать это может только тот, кому видны все счета разом: сам импортёр
+    не знает, есть ли у него двойник. Отсюда и функция здесь, а не там.
+
+    Уникальность именно доказывается по accounts.yaml, а не угадывается по
+    файлу: если двойник есть, метка остаётся обязательной, и безымянная выписка
+    просто не опознаётся — это лучше, чем уехать не на тот счёт.
+    """
+    # Номера сравниваем по хвосту той длины, которой оперирует импортёр:
+    # у более длинного совпадения хвост короче не станет.
+    def tail(spec: dict) -> str:
+        return str(spec.get("number", ""))[-AMERIA_TAIL:]
+
+    currencies = Counter(spec["currency"] for spec in specs if spec["bank"] == "ameria")
+    tails = Counter(tail(spec) for spec in specs if spec["bank"] == "ameria-account")
+
+    unique = {
+        "ameria": lambda spec: currencies[spec["currency"]] == 1,
+        "ameria-account": lambda spec: bool(tail(spec)) and tails[tail(spec)] == 1,
+    }
+    return {
+        spec["account"]
+        for spec in specs
+        if spec["bank"] in unique and unique[spec["bank"]](spec)
+    }
+
+
 def build_importers(rules: Rules | None = None, accounts: list[dict] | None = None) -> list:
     """Собрать импортёры для всех счетов из accounts.yaml.
 
@@ -163,4 +217,10 @@ def build_importers(rules: Rules | None = None, accounts: list[dict] | None = No
     """
     rules = rules if rules is not None else Rules.load(RULES)
     specs = accounts if accounts is not None else load_accounts()
-    return [BANKS[spec["bank"]][1](spec, rules) for spec in specs]
+    optional = optional_markers(specs)
+    return [
+        BANKS[spec["bank"]][1](
+            {**spec, MARKER_OPTIONAL: spec["account"] in optional}, rules
+        )
+        for spec in specs
+    ]

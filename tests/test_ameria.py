@@ -105,6 +105,47 @@ def test_marker_in_filename_selects_the_account(rules, tmp_path):
     assert not other.identify(str(plain))
 
 
+def test_unique_currency_identifies_the_file_without_a_marker(rules, tmp_path):
+    """Единственную карту в своей валюте переименовывать незачем.
+
+    Признак считает finance/config.py: ему видны все счета сразу. Здесь только
+    проверяется, что импортёр им пользуется.
+    """
+    raw = STATEMENT.read_text(encoding="utf-8-sig")
+    plain = tmp_path / "export_00001643941300036250.csv"
+    plain.write_text(raw, encoding="utf-8-sig")
+
+    alone = CardImporter(
+        AMERIA_ACCOUNT, "AMD", rules, marker=AMERIA_MARKER, marker_optional=True
+    )
+    assert alone.identify(str(plain))
+
+    # Валюта и здесь право вето: чужая выписка не достаётся никому.
+    foreign = CardImporter(
+        "Assets:Ameria:Rub", "RUB", rules, marker="rub", marker_optional=True
+    )
+    assert not foreign.identify(str(plain))
+
+
+def test_empty_statement_needs_a_marker_even_when_alone(rules, tmp_path):
+    """У выписки без операций валюты не видно — верить нечему, кроме имени.
+
+    Иначе безымянный пустой файл достался бы первому же счёту, которому метка
+    не нужна, просто потому что опровергнуть это нечем.
+    """
+    header = STATEMENT.read_text(encoding="utf-8-sig").splitlines()[0]
+    named = tmp_path / f"{AMERIA_MARKER}_empty.csv"
+    named.write_text(header + "\n", encoding="utf-8-sig")
+    plain = tmp_path / "export_00001643941300036251.csv"
+    plain.write_text(header + "\n", encoding="utf-8-sig")
+
+    imp = CardImporter(
+        AMERIA_ACCOUNT, "AMD", rules, marker=AMERIA_MARKER, marker_optional=True
+    )
+    assert imp.identify(str(named))
+    assert not imp.identify(str(plain))
+
+
 def test_currency_vetoes_a_mislabelled_file(rules, tmp_path):
     """Ошиблись меткой — выручает проверка валюты по содержимому."""
     in_rubles = tmp_path / f"{AMERIA_MARKER}_oops.csv"
