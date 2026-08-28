@@ -25,6 +25,10 @@ COPY finance/ ./finance/
 COPY tools/ ./tools/
 COPY deploy/ ./deploy/
 COPY rules.example.yaml accounts.example.yaml fava_import_config.py fava_ext.py ./
+# import.py нужен не только человеку в терминале: finance/pipeline.py зовёт
+# его подпроцессом на шагах extract и archive — нарочно тем же CLI, что описан
+# в README, чтобы описание и код не разъезжались.
+COPY import.py ./
 # Ни леджера, ни настоящих rules.yaml и accounts.yaml в образе НЕТ: они живут
 # в отдельном приватном репозитории и приезжают на том при старте. Так личных
 # данных не оказывается ни в кодовом репозитории, ни в реестре образов —
@@ -33,8 +37,15 @@ COPY rules.example.yaml accounts.example.yaml fava_import_config.py fava_ext.py 
 # Выписки, леджер, правила и список счетов — всё на томе.
 # FINANCE_APP — где лежит код. Нужен мостику ledger/fava_ext.py: расширения
 # fava ищет рядом с main.beancount, то есть на томе, а код в образе.
+#
+# DOCUMENTS и OUT тоже обязаны быть на томе, и по одной причине: слой образа
+# пересоздаётся при каждом деплое. Архив — это оригиналы выписок, ради
+# сохранности которых он и существует; out.beancount — разобранное, которое
+# ждёт подтверждения переноса и вполне может пережить сон машины.
 ENV FINANCE_INBOX=/data/inbox \
     FINANCE_LEDGER=/data/ledger \
+    FINANCE_DOCUMENTS=/data/documents \
+    FINANCE_OUT=/data/out.beancount \
     FINANCE_APP=/app \
     PYTHONUNBUFFERED=1 \
     PYTHONUTF8=1

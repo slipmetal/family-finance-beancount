@@ -30,6 +30,10 @@ DATA = Path(os.environ.get("FINANCE_DATA", "/data"))
 LEDGER = DATA / "ledger"
 INBOX = DATA / "inbox"
 AUTH = DATA / "auth"
+#: Куда `archive` уносит разобранные выписки. Лежит ВЫШЕ корня репозитория
+#: (LEDGER), поэтому оригиналы физически не могут попасть в коммит — та же
+#: защита, что и у auth/ с inbox/, см. setup_git().
+DOCUMENTS = DATA / "documents"
 
 FAVA_PORT = "5000"
 #: Как часто складывать изменения леджера в коммит.
@@ -52,7 +56,7 @@ def run(*args: str, cwd: Path | None = None, check: bool = True) -> subprocess.C
 
 def prepare_dirs() -> None:
     """Создать каталоги на томе. Леджер и ссылки здесь НЕ трогаем."""
-    for path in (DATA, INBOX, AUTH):
+    for path in (DATA, INBOX, AUTH, DOCUMENTS):
         path.mkdir(parents=True, exist_ok=True)
 
 

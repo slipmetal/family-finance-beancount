@@ -85,7 +85,7 @@ class Pipeline:
         self.inbox = inbox or config.INBOX
         self.ledger = ledger or config.LEDGER
         self.documents = documents or config.DOCUMENTS
-        self.out = out or ROOT / "out.beancount"
+        self.out = out or config.OUT
         self.uncategorized = uncategorized
 
     @property
