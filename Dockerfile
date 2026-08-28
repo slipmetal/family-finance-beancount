@@ -24,15 +24,18 @@ RUN pip install --no-cache-dir -r requirements-deploy.txt
 COPY finance/ ./finance/
 COPY tools/ ./tools/
 COPY deploy/ ./deploy/
-COPY rules.example.yaml accounts.example.yaml fava_import_config.py ./
+COPY rules.example.yaml accounts.example.yaml fava_import_config.py fava_ext.py ./
 # Ни леджера, ни настоящих rules.yaml и accounts.yaml в образе НЕТ: они живут
 # в отдельном приватном репозитории и приезжают на том при старте. Так личных
 # данных не оказывается ни в кодовом репозитории, ни в реестре образов —
 # в образе только образцы, по которым собирается пустой скелет.
 
 # Выписки, леджер, правила и список счетов — всё на томе.
+# FINANCE_APP — где лежит код. Нужен мостику ledger/fava_ext.py: расширения
+# fava ищет рядом с main.beancount, то есть на томе, а код в образе.
 ENV FINANCE_INBOX=/data/inbox \
     FINANCE_LEDGER=/data/ledger \
+    FINANCE_APP=/app \
     PYTHONUNBUFFERED=1 \
     PYTHONUTF8=1
 

@@ -1,0 +1,79 @@
+{# Страница расширения finance/fava_upload.py. Имя файла обязано совпадать
+   с именем класса: по нему fava и находит шаблон.
+
+   Разметка нарочно голая — fava стилизует table, input и button сама,
+   и своя вёрстка разъезжалась бы с её темой при каждом обновлении. #}
+
+{% set rows = extension.rows() %}
+{% set message = extension.message() %}
+
+{% if message %}
+  <p><strong>{{ message }}</strong></p>
+{% endif %}
+
+<h2>Загрузить выписку</h2>
+
+<form method="POST"
+      action="{{ extension.action('upload') }}"
+      enctype="multipart/form-data">
+  <p>
+    <input type="file" name="statement" required>
+    <select name="account">
+      <option value="">счёт — по содержимому файла</option>
+      {% for account in extension.accounts() %}
+        <option value="{{ account }}">{{ account }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit">Загрузить</button>
+  </p>
+</form>
+
+<p>
+  Счёт почти всегда написан внутри самой выписки — тогда список можно не
+  трогать. Выбирать приходится там, где по содержимому счёт не определить:
+  у Ameriabank номера счёта в файле нет вовсе.
+</p>
+
+<h2>В папке импорта</h2>
+
+{% if not rows %}
+  <p>Пусто. Загруженное появится здесь.</p>
+{% else %}
+  <table>
+    <thead>
+      <tr><th>Файл</th><th>Счёт</th></tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+        <tr>
+          <td>{{ row.name }}</td>
+          <td>
+            {% if row.settled %}
+              {{ row.account }}
+            {% elif row.choices %}
+              {# Счёт не определить по содержимому — выбрать может только человек. #}
+              <form method="POST"
+                    action="{{ extension.action('assign') }}">
+                <input type="hidden" name="file" value="{{ row.name }}">
+                <select name="account">
+                  {% for choice in row.choices %}
+                    <option value="{{ choice }}">{{ choice }}</option>
+                  {% endfor %}
+                </select>
+                <button type="submit">Назначить</button>
+              </form>
+            {% else %}
+              {{ row.problem }}
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <p>
+    Разобрать и сохранить в леджер — на вкладке
+    <a href="{{ url_for('report', report_name='import') }}">Import</a>.
+    Файл, у которого здесь не назван счёт, она не увидит.
+  </p>
+{% endif %}

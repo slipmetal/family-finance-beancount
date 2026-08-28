@@ -89,6 +89,11 @@ option "operating_currency" "AMD"
 2026-01-01 custom "fava-option" "import-config" "../fava_import_config.py"
 2026-01-01 custom "fava-option" "import-dirs" "../inbox"
 
+;; Страница «Выписки»: загрузить файл и назвать счёт, если по содержимому
+;; его не определить. Мостик fava_ext.py лежит рядом с этим файлом —
+;; расширения fava ищет только здесь.
+2026-01-01 custom "fava-extension" "fava_ext"
+
 include "accounts.beancount"
 include "transactions/manual.beancount"
 """
@@ -120,6 +125,12 @@ def seed_ledger() -> None:
         if not target.exists():
             log(f"{name} в репозитории нет — кладу образец, его нужно поправить под себя")
             shutil.copy(APP / name.replace(".yaml", ".example.yaml"), target)
+
+    # Мостик к расширениям: fava ищет их рядом с main.beancount, то есть на
+    # томе, а код лежит в образе. Правится он не под себя, а никогда, поэтому
+    # кладётся как есть и без предупреждений.
+    if not (LEDGER / "fava_ext.py").exists():
+        shutil.copy(APP / "fava_ext.py", LEDGER / "fava_ext.py")
 
     if (LEDGER / "main.beancount").exists():
         return
