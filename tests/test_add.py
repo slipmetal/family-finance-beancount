@@ -15,7 +15,7 @@ import pytest
 from beancount.core import amount, data
 
 from finance.add import AddCommand
-from finance.pipeline import Extraction, Step
+from finance.pipeline import Extraction, Pipeline, Step
 from tests.conftest import copy
 from tests.fixtures import AMERIA_ACCOUNT_DIR, AMERIA_CARD_DIR
 
@@ -85,6 +85,12 @@ class FakePipeline:
     def check(self) -> Step:
         self.calls.append("check")
         return self._step("Проверка леджера")
+
+    #: Цепочка берётся настоящая. Подделать порядок шагов и остановку на первой
+    #: неудаче значило бы проверять подделку — а это ровно то место, где
+    #: однажды уже была ошибка: архив уносил выписки после несостоявшегося
+    #: переноса. Методу нужны только merge/rates/archive/check, а они здесь свои.
+    finish = Pipeline.finish
 
     def _step(self, name: str) -> Step:
         ok = self.calls[-1].split("(")[0] != self.failing
