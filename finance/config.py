@@ -39,6 +39,9 @@ ACCOUNTS = Path(os.environ.get("FINANCE_ACCOUNTS") or LEDGER / "accounts.yaml")
 #: между разбором и подтверждением переноса может пройти сколько угодно
 #: времени — машина успевает и заснуть, и обновиться.
 OUT = Path(os.environ.get("FINANCE_OUT") or ROOT / "out.beancount")
+#: Рабочее бота: секрет вебхука, замок импорта, память о виденных апдейтах.
+#: Ничего из этого не переживает пересборку образа, поэтому на сервере — том.
+RUN = Path(os.environ.get("FINANCE_RUN") or ROOT / ".run")
 
 
 class ConfigError(Exception):

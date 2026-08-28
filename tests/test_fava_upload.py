@@ -4,8 +4,9 @@
 маршруты и шаблон, и подделать их значило бы проверять не то. Леджер для этого
 собирается временный — настоящий лежит в приватном репозитории.
 
-Инбокс и список счетов подменяются в `finance.config`: и раскладка, и импорт
-читают их оттуда в момент вызова, а не при импорте модуля.
+Инбокс, список счетов и правила подменяются в `finance.config` фикстурой
+`finance_env` из conftest: и раскладка, и импорт читают их оттуда в момент
+вызова, а не при импорте модуля.
 """
 
 from __future__ import annotations
@@ -14,12 +15,10 @@ from io import BytesIO
 from pathlib import Path
 
 import pytest
-import yaml
 
-from finance import config
 from finance.fava_upload import UploadStatements, describe
-from tests.conftest import ACCOUNTS, copy
-from tests.fixtures import AMERIA_ACCOUNT_DIR, AMERIA_CARD_DIR, RULES
+from tests.conftest import copy
+from tests.fixtures import AMERIA_ACCOUNT_DIR, AMERIA_CARD_DIR
 
 CARD = AMERIA_CARD_DIR / "card0001_statement.csv"
 ACCOUNT = AMERIA_ACCOUNT_DIR / "usd_statement.csv"
@@ -32,18 +31,9 @@ option "operating_currency" "AMD"
 
 
 @pytest.fixture
-def page(tmp_path, monkeypatch):
+def page(tmp_path, finance_env):
     """Клиент fava, у которого страница расширения смотрит во временный inbox."""
-    inbox = tmp_path / "inbox"
-    inbox.mkdir()
-    accounts = tmp_path / "accounts.yaml"
-    accounts.write_text(yaml.safe_dump({"accounts": ACCOUNTS}, allow_unicode=True), "utf-8")
-    # Все три пути, по которым страница собирает раскладку. RULES ведёт
-    # к боевым правилам рядом с леджером, а его в CI нет вовсе — подменяются
-    # они не для изоляции, а чтобы тест вообще мог работать без него.
-    monkeypatch.setattr(config, "INBOX", inbox)
-    monkeypatch.setattr(config, "ACCOUNTS", accounts)
-    monkeypatch.setattr(config, "RULES", RULES)
+    inbox = finance_env
 
     ledger_dir = tmp_path / "ledger"
     ledger_dir.mkdir()

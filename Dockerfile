@@ -28,7 +28,7 @@ COPY rules.example.yaml accounts.example.yaml fava_import_config.py fava_ext.py 
 # import.py нужен не только человеку в терминале: finance/pipeline.py зовёт
 # его подпроцессом на шагах extract и archive — нарочно тем же CLI, что описан
 # в README, чтобы описание и код не разъезжались.
-COPY import.py ./
+COPY import.py bot.py ./
 # Ни леджера, ни настоящих rules.yaml и accounts.yaml в образе НЕТ: они живут
 # в отдельном приватном репозитории и приезжают на том при старте. Так личных
 # данных не оказывается ни в кодовом репозитории, ни в реестре образов —
@@ -46,6 +46,7 @@ ENV FINANCE_INBOX=/data/inbox \
     FINANCE_LEDGER=/data/ledger \
     FINANCE_DOCUMENTS=/data/documents \
     FINANCE_OUT=/data/out.beancount \
+    FINANCE_RUN=/data/run \
     FINANCE_APP=/app \
     PYTHONUNBUFFERED=1 \
     PYTHONUTF8=1
