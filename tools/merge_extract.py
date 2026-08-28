@@ -38,6 +38,8 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+# Импорты ниже — после вставки в sys.path: без неё их не найти.
+# pylint: disable=wrong-import-position
 from finance.config import LEDGER  # noqa: E402
 
 #: Куда раскладывать проводки. Путь берётся у общего конфига, а не собирается
@@ -98,6 +100,8 @@ def load(path: Path) -> list[data.Directive]:
 
 
 def main(source: Path, replace: bool = False) -> None:
+    """Перенести разобранное в леджер: разложить по годам, слить с тем, что
+    там уже лежит, и пересортировать по дате."""
     incoming = load(source)
     if not incoming:
         raise SystemExit(f"{source}: нечего переносить")
@@ -134,8 +138,12 @@ def main(source: Path, replace: bool = False) -> None:
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    """Аргументы командной строки; про `--replace` см. докстринг модуля."""
     parser_ = argparse.ArgumentParser(
-        description="Перенести вывод `import.py extract` в ledger/transactions/, разложив по годам.",
+        description=(
+            "Перенести вывод `import.py extract` в ledger/transactions/, "
+            "разложив по годам."
+        ),
         epilog=(
             "Повторный запуск на том же файле ничего не добавляет: одинаковые "
             "проводки сравниваются по количеству, а не по факту наличия."

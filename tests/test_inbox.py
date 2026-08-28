@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import pytest
 
-from finance.inbox import Inbox, InboxError
+from finance.inbox import InboxError
 from tests.conftest import account_named, copy
 from tests.fixtures import ACBA_CARD_DIR, AMERIA_ACCOUNT_DIR, AMERIA_CARD_DIR
 

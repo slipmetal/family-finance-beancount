@@ -21,5 +21,4 @@ tools/anonymize.yaml
 
 # Тесты, фикстуры и CI в рантайме не нужны.
 tests/
-*_test.py
 .github/

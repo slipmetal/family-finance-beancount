@@ -200,7 +200,7 @@ Ameriabank.
 
 Что осталось в этом репозитории из данных: анонимизированные тестовые фикстуры
 в `tests/`. Имена, номера счетов и маски карт в них заменены заглушками —
-см. [Тесты](#тесты).
+см. [Тесты и линтер](#тесты-и-линтер).
 
 ## Установка
 
@@ -402,24 +402,36 @@ beancount отвергнет леджер. Это проверяет тест
 сходиться в ноль, а тут сходиться не с чем. Растущий отрицательный остаток
 показывает, сколько всего оттуда взято. Тег `#external`.
 
-## Тесты
+## Тесты и линтер
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest
+.\.venv\Scripts\python.exe -m pylint finance tools tests import.py fava_import_config.py
 ```
 
-Отдельно — regression-тесты импортёров на эталонных файлах:
+Обе команды прогоняет CI отдельными джобами, и деплой ждёт обеих: выкатка идёт
+сразу в единственную рабочую машину, откатывать оттуда дороже, чем не выкатить.
+
+Настройки pylint — в [pyproject.toml](pyproject.toml), там же сказано, что
+отключено и почему. Отключены три проверки, и каждая — не потому что мешает,
+а потому что ловит нормальный для этого проекта приём: одноимённый аргумент
+фикстуры pytest, неизбежное сходство тестов разных банков и локальный импорт
+внутри функции. Требование докстринга оставлено, но только для функций
+длиннее десяти строк: короткая функция объясняет себя именем.
+
+Отдельно — regression-тесты импортёров на эталонных файлах. Их шесть, по одному
+на формат выписки, и запускает их [tests/golden.py](tests/golden.py):
 
 ```powershell
-.\.venv\Scripts\python.exe ameria_test.py         test tests\ameria\card
-.\.venv\Scripts\python.exe ameria_account_test.py test tests\ameria\account
-.\.venv\Scripts\python.exe acba_card_test.py   test tests\acba\card
-.\.venv\Scripts\python.exe acba_account_test.py test tests\acba\account
-.\.venv\Scripts\python.exe tbank_test.py       test tests\tbank
-.\.venv\Scripts\python.exe sber_test.py        test tests\sber
+.\.venv\Scripts\python.exe tests\golden.py list             # какие эталоны есть
+.\.venv\Scripts\python.exe tests\golden.py ameria-card test
 ```
 
-Вместо `test` можно `generate` — перезаписать эталон.
+Вместо `test` можно `generate` — перезаписать эталон. Папку с фикстурами
+указывать не нужно: у каждого эталона она своя и записана в самом скрипте.
+
+Эти же шесть проверок прогоняет и `pytest` — подпроцессом, потому что сверка
+живёт в click-команде beangulp и сборщику тестов не видна.
 
 Тесты работают на своих правилах `tests/rules.yaml`, а не на боевых: боевые
 лежат в приватном репозитории, и их правка не должна ломать эталоны. Поменяли
@@ -455,10 +467,10 @@ beancount отвергнет леджер. Это проверяет тест
 
 ```powershell
 .\.venv\Scripts\python.exe tools\make_tbank_fixture.py
-.\.venv\Scripts\python.exe tbank_test.py generate tests\tbank --force
+.\.venv\Scripts\python.exe tests\golden.py tbank generate --force
 
 .\.venv\Scripts\python.exe tools\make_sber_fixture.py
-.\.venv\Scripts\python.exe sber_test.py generate tests\sber --force
+.\.venv\Scripts\python.exe tests\golden.py sber generate --force
 ```
 
 Причина в формате. Анонимизировать PDF значит переписать текст внутри сжатых
@@ -645,6 +657,8 @@ flyctl tokens create deploy -a <имя-приложения> -x 8760h
 работают на анонимизированных фикстурах. Заодно на каждом прогоне отрабатывает
 `tests/test_no_secrets.py` — настоящий номер счёта не доедет до `main`
 незамеченным.
+
+Линтер идёт своей джобой, параллельно тестам, и деплой ждёт обеих.
 
 ### Проверка перед деплоем
 

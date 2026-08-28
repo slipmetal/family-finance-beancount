@@ -18,6 +18,8 @@ ROOT = Path(__file__).resolve().parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+# Импорты ниже — после вставки в sys.path: без неё их не найти.
+# pylint: disable=wrong-import-position
 from finance.config import build_importers  # noqa: E402
 
 CONFIG = build_importers()

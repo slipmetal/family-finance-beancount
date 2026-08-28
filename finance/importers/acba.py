@@ -358,7 +358,9 @@ class AccountImporter(beangulp.Importer):
         if row.get("CORRESPONDENTACCOUNT"):
             meta["correspondent"] = row.get("CORRESPONDENTACCOUNT")
         # Эквивалент в драмах — для валютных счетов это фактический курс сделки.
-        in_amd = _decimal(row.get("CREDITAMOUNTAMD", "0")) - _decimal(row.get("DEBITAMOUNTAMD", "0"))
+        in_amd = _decimal(row.get("CREDITAMOUNTAMD", "0")) - _decimal(
+            row.get("DEBITAMOUNTAMD", "0")
+        )
         if self.currency != "AMD" and in_amd:
             meta["amd"] = f"{in_amd} AMD"
 

@@ -53,6 +53,8 @@ class Anonymizer:
 
     @classmethod
     def load(cls, path: Path | None = None) -> Anonymizer:
+        """Прочитать карту замен и проверить её здесь же: недосмотр в ней
+        обнаружится не в тесте, а в опубликованной фикстуре."""
         path = path if path is not None else MAP_PATH
         try:
             raw = yaml.safe_load(path.read_text(encoding="utf-8"))

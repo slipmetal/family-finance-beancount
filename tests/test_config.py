@@ -41,7 +41,8 @@ def test_numbers_survive_yaml_as_strings(tmp_path):
     """YAML охотно превращает номер счёта в int, а сравнивать надо строки."""
     specs = make_accounts(
         tmp_path,
-        [{"bank": "acba-card", "account": "Assets:Acba:Amd", "currency": "AMD", "number": 12345678}],
+        [{"bank": "acba-card", "account": "Assets:Acba:Amd",
+          "currency": "AMD", "number": 12345678}],
     )
     assert specs[0]["number"] == "12345678"
 
@@ -91,6 +92,7 @@ def test_missing_file_explains_where_it_lives(tmp_path):
     ],
 )
 def test_broken_config_fails_on_load(tmp_path, accounts, expected):
+    """Каждая ошибка из списка выше обязана всплыть при загрузке счетов."""
     with pytest.raises(ConfigError, match=expected):
         make_accounts(tmp_path, accounts)
 

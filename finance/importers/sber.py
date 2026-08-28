@@ -458,7 +458,7 @@ def _first_page_text(filepath: str) -> str | None:
             if not pdf.pages:
                 return None
             return _text(_rows(pdf.pages[0]))
-    except Exception:  # noqa: BLE001 — см. докстринг
+    except Exception:  # noqa: BLE001  # pylint: disable=broad-exception-caught
         return None
 
 

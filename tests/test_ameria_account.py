@@ -5,9 +5,6 @@
 
 from __future__ import annotations
 
-import os
-import subprocess
-import sys
 from decimal import Decimal
 from pathlib import Path
 
@@ -17,6 +14,7 @@ from beangulp import extract
 
 from finance.categorize import Rules
 from finance.importers.ameria import AccountImporter, CardImporter
+from tests.conftest import check_golden
 from tests.fixtures import (
     AMERIA_ACCOUNT_DIR,
     AMERIA_CARD_DIR,
@@ -55,15 +53,7 @@ def by_type(transactions, kind: str) -> list[data.Transaction]:
 
 
 def test_golden_file_matches():
-    result = subprocess.run(  # noqa: S603
-        [sys.executable, str(ROOT / "ameria_account_test.py"), "test", str(AMERIA_ACCOUNT_DIR)],
-        cwd=ROOT,
-        env={**os.environ, "PYTHONUTF8": "1"},
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-    )
-    assert result.returncode == 0, result.stdout + result.stderr
+    check_golden("ameria-account")
 
 
 # ───────────────────────────── опознание файла ─────────────────────────────

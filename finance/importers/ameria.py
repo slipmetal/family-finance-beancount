@@ -367,7 +367,9 @@ class AccountImporter(beangulp.Importer):
         seen: dict[str, int] = {}
         return [self._transaction(filepath, i, row, seen) for i, row in enumerate(body)]
 
-    def _transaction(self, filepath: str, index: int, row, seen: dict[str, int]) -> data.Transaction:
+    def _transaction(
+        self, filepath: str, index: int, row, seen: dict[str, int]
+    ) -> data.Transaction:
         value = _number(row[COL_CREDIT]) - _number(row[COL_DEBIT])
 
         meta = data.new_metadata(filepath, index + 2)

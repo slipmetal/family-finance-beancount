@@ -86,6 +86,7 @@ class AddCommand:
     # ─────────────────────────────── сценарий ───────────────────────────────
 
     def run(self, sources: list[Path], *, move: bool, assume_yes: bool, replace: bool) -> int:
+        """Сценарий целиком. Возвращает код возврата процесса."""
         files = self._collect(sources)
         if not files:
             self.console.warn("Нечего импортировать: не передан ни один файл.")

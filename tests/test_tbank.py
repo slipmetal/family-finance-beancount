@@ -2,9 +2,6 @@
 
 from __future__ import annotations
 
-import os
-import subprocess
-import sys
 from decimal import Decimal
 from pathlib import Path
 
@@ -14,6 +11,7 @@ from beangulp import extract
 
 from finance.categorize import Rules
 from finance.importers.tbank import Importer
+from tests.conftest import check_golden
 from tests.fixtures import RULES, TBANK_ACCOUNT, TBANK_DIR, TBANK_NUMBER, TBANK_NUMBER_OTHER
 from tools.make_tbank_fixture import ROWS, Header, Row, build_statement, compute_totals
 
@@ -42,21 +40,17 @@ def transactions(entries) -> list[data.Transaction]:
 
 
 def by_narration(transactions, text: str) -> data.Transaction:
-    found = [t for t in transactions if text in (t.narration or "") or text in (t.meta.get("details") or "")]
+    found = [
+        t
+        for t in transactions
+        if text in (t.narration or "") or text in (t.meta.get("details") or "")
+    ]
     assert len(found) == 1, f"ожидалась одна проводка с {text!r}, нашлось {len(found)}"
     return found[0]
 
 
 def test_golden_file_matches():
-    result = subprocess.run(  # noqa: S603
-        [sys.executable, str(ROOT / "tbank_test.py"), "test", str(TBANK_DIR)],
-        cwd=ROOT,
-        env={**os.environ, "PYTHONUTF8": "1"},
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-    )
-    assert result.returncode == 0, result.stdout + result.stderr
+    check_golden("tbank")
 
 
 # ───────────────────────────── опознание файла ─────────────────────────────
@@ -201,7 +195,7 @@ def test_reimport_marks_everything_as_duplicate(importer, entries, transactions)
     assert len(marked) == len(transactions)
 
 
-def test_only_the_overlapping_part_is_marked(importer, entries, rules, tmp_path):
+def test_only_the_overlapping_part_is_marked(importer, tmp_path):
     """Выписки внахлёст по датам: повторяются не все операции, а часть.
 
     Ровно ради этого случая дедуп и нужен — второй выгрузкой добираются новые
@@ -256,7 +250,7 @@ def test_unknown_currency_sign_is_rejected(rules, tmp_path):
         importer.extract(str(path), [])
 
 
-def test_currency_mismatch_with_the_account_is_rejected(rules, tmp_path):
+def test_currency_mismatch_with_the_account_is_rejected(rules):
     """Справка в рублях не должна молча записаться на драмовый счёт."""
     importer = Importer("Assets:Tbank:Amd", "AMD", TBANK_NUMBER, rules)
     with pytest.raises(ValueError, match="не совпадает с валютой счёта"):

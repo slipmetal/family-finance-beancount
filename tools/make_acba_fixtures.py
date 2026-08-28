@@ -27,6 +27,8 @@ import xlwt
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+# Импорты ниже — после вставки в sys.path: без неё их не найти.
+# pylint: disable=wrong-import-position
 from tools.anonymize import Anonymizer  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -102,6 +104,11 @@ def summary_overrides(sheet) -> dict[tuple[int, int], str]:
 
 
 def build_card_fixture(anon: Anonymizer, source: Path, out: Path) -> int:
+    """Собрать фикстуру карточной выписки (.xls). Возвращает число строк.
+
+    Ячейки копируются как есть, чтобы макет остался банковским; подменяется
+    только содержимое.
+    """
     sheet = xlrd.open_workbook(source, logfile=io.StringIO()).sheet_by_index(0)
 
     picked: list[int] = []
@@ -148,6 +155,7 @@ ACCOUNT_TYPES = {"TRF": 3, "CEX": 2, "FEE": 1, "MSC": 2}
 
 
 def build_account_fixture(anon: Anonymizer, source: Path, out: Path) -> int:
+    """Собрать фикстуру выписки по счёту (.xml). Возвращает число операций."""
     root = ET.parse(source).getroot()
     node = root.find("Transactions")
 

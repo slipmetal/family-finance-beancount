@@ -53,6 +53,7 @@ def test_first_matching_rule_wins(tmp_path):
 
 
 def test_match_keys_are_combined_with_and(tmp_path):
+    """Условия внутри `match` складываются по И: одного мало."""
     rules = make_rules(
         tmp_path,
         {
@@ -108,6 +109,7 @@ def test_amount_thresholds_compare_magnitude(tmp_path):
 
 
 def test_unmatched_falls_back_to_default(tmp_path):
+    """Не подошло ни одно правило — счёт по умолчанию и пустой результат."""
     rules = make_rules(
         tmp_path,
         {
@@ -123,6 +125,7 @@ def test_unmatched_falls_back_to_default(tmp_path):
 
 
 def test_rule_carries_payee_narration_and_tags(tmp_path):
+    """Правило задаёт не только счёт: контрагент, описание и теги едут с ним."""
     rules = make_rules(
         tmp_path,
         {
@@ -194,7 +197,9 @@ def test_account_is_not_part_of_text(tmp_path):
     """Иначе правило на мерчанта цеплялось бы за имя счёта."""
     rules = make_rules(
         tmp_path,
-        {"rules": [{"name": "merchant", "match": {"text": "Tbank"}, "account": "Expenses:Shopping"}]},
+        {"rules": [
+            {"name": "merchant", "match": {"text": "Tbank"}, "account": "Expenses:Shopping"}
+        ]},
     )
     assert not apply(rules, details="Оплата в магазине", account="Assets:Tbank:Rub").matched
 
@@ -220,7 +225,6 @@ def test_categorize_takes_the_account_from_the_first_posting(tmp_path):
     import datetime as dt
 
     from beancount.core import amount as bc_amount
-    from beancount.core import data
 
     from finance.booking import categorize
 
@@ -296,6 +300,7 @@ def test_categorize_takes_the_account_from_the_first_posting(tmp_path):
     ],
 )
 def test_broken_config_fails_on_load(tmp_path, config, expected):
+    """Каждая ошибка из списка выше обязана всплыть при загрузке правил."""
     with pytest.raises(RulesError, match=expected):
         make_rules(tmp_path, config)
 
@@ -326,7 +331,11 @@ def test_landlord_transfers_are_split_by_amount(tmp_path):
             "rules": [
                 {
                     "name": "rent",
-                    "match": {"text": "(?i)ivanov|Իվանով", "amount_min": 300000, "amount_max": 300000},
+                    "match": {
+                        "text": "(?i)ivanov|Իվանով",
+                        "amount_min": 300000,
+                        "amount_max": 300000,
+                    },
                     "account": "Expenses:Home:Rent",
                 },
                 {

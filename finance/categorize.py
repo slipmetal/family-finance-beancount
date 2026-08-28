@@ -116,11 +116,17 @@ class Rules:
         if raw is None:
             raise RulesError(f"{path}: файл пуст")
         if not isinstance(raw, dict):
-            raise RulesError(f"{path}: ожидался словарь на верхнем уровне, получен {type(raw).__name__}")
+            raise RulesError(
+                f"{path}: ожидался словарь на верхнем уровне, "
+                f"получен {type(raw).__name__}"
+            )
 
         unknown = set(raw) - {"default_account", "rules"}
         if unknown:
-            raise RulesError(f"{path}: неизвестные ключи верхнего уровня: {', '.join(sorted(unknown))}")
+            raise RulesError(
+                f"{path}: неизвестные ключи верхнего уровня: "
+                + ", ".join(sorted(unknown))
+            )
 
         default_account = raw.get("default_account", "Expenses:Uncategorized")
         _check_account(default_account, f"{path}: default_account")
@@ -220,11 +226,15 @@ def _parse_rule(item: Any, *, where: str) -> Rule:
             # `^` и `$` в нём привязываются к границам поля, а не всей склейки.
             patterns[field] = re.compile(value, re.MULTILINE if field == "text" else 0)
         except re.error as exc:
-            raise RulesError(f"{where} ({name}): `match.{field}` — невалидная регулярка: {exc}") from exc
+            raise RulesError(
+                f"{where} ({name}): `match.{field}` — невалидная регулярка: {exc}"
+            ) from exc
 
     sign = match.get("sign")
     if sign is not None and sign not in ("+", "-"):
-        raise RulesError(f"{where} ({name}): `match.sign` должен быть '+' или '-', получено {sign!r}")
+        raise RulesError(
+            f"{where} ({name}): `match.sign` должен быть '+' или '-', получено {sign!r}"
+        )
 
     amount_min = _decimal(match.get("amount_min"), where=f"{where} ({name}): match.amount_min")
     amount_max = _decimal(match.get("amount_max"), where=f"{where} ({name}): match.amount_max")

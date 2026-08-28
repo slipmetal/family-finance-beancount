@@ -7,6 +7,9 @@
 
 from __future__ import annotations
 
+import os
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -16,6 +19,9 @@ from finance.categorize import Rules
 from finance.config import build_importers, load_accounts
 from finance.inbox import Account, Inbox
 from tests.fixtures import RULES
+
+ROOT = Path(__file__).resolve().parents[1]
+GOLDEN = ROOT / "tests" / "golden.py"
 
 #: Два счёта в AMD различимы только по имени файла, два счёта в валюте — по
 #: хвосту номера в описании процентов. Плюс счёт ACBA: у него метки нет вовсе,
@@ -51,6 +57,29 @@ def inbox(tmp_path, rules) -> Inbox:
         for importer, spec in zip(importers, specs, strict=True)
     ]
     return Inbox(accounts, tmp_path / "inbox")
+
+
+def check_golden(name: str) -> None:
+    """Сверить эталон и упасть с его выводом, если разошёлся.
+
+    Подпроцессом, потому что сверка живёт в click-команде beangulp, а её
+    pytest сам не подхватит. Заодно так проверяется и сам скрипт: тесты зовут
+    его ровно так же, как позовёте вы руками.
+
+    Разошлось после правки tests/rules.yaml — посмотрите дифф и, если он
+    ожидаемый, перегенерируйте: `python tests/golden.py <имя> generate`.
+    """
+    result = subprocess.run(  # noqa: S603
+        [sys.executable, str(GOLDEN), name, "test"],
+        cwd=ROOT,
+        env={**os.environ, "PYTHONUTF8": "1"},
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        # check=False: падать должен assert с выводом скрипта, а не сам вызов.
+        check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
 
 
 def copy(source: Path, into: Path, name: str) -> Path:

@@ -5,7 +5,7 @@
 
 Пишет `tests/tbank/statement.pdf`. Эталон после этого перегенерировать:
 
-    python tbank_test.py generate tests/tbank --force
+    python tests/golden.py tbank generate --force
 
 В отличие от фикстур ACBA, здесь **настоящая выписка не участвует вовсе**:
 tools/anonymize.py не нужен, карту замен искать не надо. Причина в формате.
@@ -412,4 +412,4 @@ if __name__ == "__main__":
     used = register_font()
     written = build_statement(OUT)
     print(f"{written.relative_to(ROOT)}: {len(ROWS)} операций, шрифт {used}")
-    print("Дальше: python tbank_test.py generate tests/tbank --force", file=sys.stderr)
+    print("Дальше: python tests/golden.py tbank generate --force", file=sys.stderr)

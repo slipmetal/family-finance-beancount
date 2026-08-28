@@ -28,8 +28,29 @@ jobs:
       # счетов и маски карт, так что утечка не доедет до main незамеченной.
       - run: pytest -q
 
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
+      # Зависимости нужны целиком: без них pylint не видит ни beangulp, ни
+      # beancount и ругается на каждый импорт, вместо того чтобы проверять код.
+      - run: pip install -r requirements-dev.txt
+
+      # Настройки — в pyproject.toml, включая то, что отключено и почему.
+      # Список путей повторяет README: линтуется всё, что мы написали сами.
+      - run: pylint finance tools tests import.py fava_import_config.py
+
   deploy:
-    needs: test
+    # Выкатывается только то, что прошло и тесты, и линтер: деплой идёт сразу
+    # в единственную рабочую машину, откатывать оттуда дороже, чем не выкатить.
+    needs: [test, lint]
     # Только с main. В pull_request секрета всё равно не видно, и job упал бы.
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest

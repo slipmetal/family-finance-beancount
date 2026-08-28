@@ -8,16 +8,13 @@ click-командой, которую pytest сам не подхватит —
 from __future__ import annotations
 
 import csv
-import os
-import subprocess
-import sys
 from decimal import Decimal
-from pathlib import Path
 
 import pytest
 
 from finance.categorize import Rules
 from finance.importers.ameria import CardImporter, _clean_narration
+from tests.conftest import check_golden
 from tests.fixtures import (
     AMERIA_ACCOUNT,
     AMERIA_ACCOUNT_OTHER,
@@ -27,7 +24,6 @@ from tests.fixtures import (
     RULES,
 )
 
-ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = AMERIA_CARD_DIR
 # Метка счёта в имени обязательна — по ней импортёр и опознаёт файл.
 STATEMENT = FIXTURES / f"{AMERIA_MARKER}_statement.csv"
@@ -39,25 +35,13 @@ def rules() -> Rules:
 
 
 @pytest.fixture(scope="module")
-def importer(rules) -> Importer:
+def importer(rules) -> CardImporter:
     return CardImporter(AMERIA_ACCOUNT, "AMD", rules, marker=AMERIA_MARKER)
 
 
 def test_golden_file_matches():
-    """Эталон покрывает разбор строк плюс account(), date() и filename().
-
-    Разошлось после правки tests/rules.yaml — посмотрите дифф и, если он ожидаемый,
-    перегенерируйте: `python ameria_test.py generate tests/ameria/card`.
-    """
-    result = subprocess.run(  # noqa: S603
-        [sys.executable, str(ROOT / "ameria_test.py"), "test", str(FIXTURES)],
-        cwd=ROOT,
-        env={**os.environ, "PYTHONUTF8": "1"},
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-    )
-    assert result.returncode == 0, result.stdout + result.stderr
+    """Эталон покрывает разбор строк плюс account(), date() и filename()."""
+    check_golden("ameria-card")
 
 
 def test_identifies_own_statement(importer):
