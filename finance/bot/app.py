@@ -49,6 +49,7 @@ class BotApp:
             default=DefaultBotProperties(parse_mode=ParseMode.HTML),
         )
         self.dispatcher = self.build_dispatcher()
+        self._registering: asyncio.Task | None = None
 
     def build_dispatcher(self) -> Dispatcher:
         """Диспетчер со всеми роутерами и проверкой доступа перед ними."""
@@ -82,7 +83,9 @@ class BotApp:
         начинает принимать соединения, и медленный setWebhook задержал бы
         ровно тот запрос, которым нас разбудили.
         """
-        asyncio.create_task(self._register())  # noqa: RUF006
+        # Задача держится за приложением: asyncio хранит на неё лишь слабую
+        # ссылку, и без этого сборщик мусора вправе убрать её на полпути.
+        self._registering = asyncio.create_task(self._register())
 
     async def _register(self) -> None:
         """Поставить вебхук, не сдаваясь с первого раза.
@@ -92,8 +95,11 @@ class BotApp:
         идемпотентен и очередь не сбрасывает, а лишний вызов на перезапуске
         дешевле, чем неполная проверка. Заодно это чинит вебхук, если его
         увёл тестовый бот.
+
+        Внутри try ВСЁ, что ходит в сеть, включая список команд: он сам по
+        себе необязателен, но его падение не должно уносить с собой
+        регистрацию вебхука — без неё бот не получит ни одного сообщения.
         """
-        await self.bot.set_my_commands(COMMANDS)
         for pause in RETRIES:
             await asyncio.sleep(pause)
             try:
@@ -109,10 +115,18 @@ class BotApp:
                     drop_pending_updates=False,
                 )
                 log.info("вебхук поставлен")
+                await self._describe()
                 return
             except TelegramAPIError as error:
                 log.warning("setWebhook не удался: %s", error)
         log.error("вебхук поставить так и не вышло")
+
+    async def _describe(self) -> None:
+        """Показать список команд в меню чата. Не вышло — и ладно."""
+        try:
+            await self.bot.set_my_commands(COMMANDS)
+        except TelegramAPIError as error:
+            log.warning("список команд не обновился: %s", error)
 
     def run(self) -> None:
         """Поднять бота — вебхуком или опросом."""
@@ -134,7 +148,7 @@ class BotApp:
         вебхук у боевого, вы молча его сломаете.
         """
         await self.bot.delete_webhook(drop_pending_updates=False)
-        await self.bot.set_my_commands(COMMANDS)
+        await self._describe()
         await self.dispatcher.start_polling(self.bot)
 
     @classmethod
