@@ -8,7 +8,7 @@ pythonpath = ["."]
 
 # ─────────────────────────────── pylint ───────────────────────────────
 #
-# Запуск: python -m pylint finance tools tests import.py fava_import_config.py
+# Запуск: python -m pylint finance tools tests import.py fava_import_config.py fava_ext.py
 # То же самое делает CI, см. .github/workflows/ci.yml.
 
 [tool.pylint.main]
