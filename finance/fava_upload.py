@@ -29,7 +29,6 @@ fava_import_config.py, нельзя: расширения грузятся ра�
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -37,27 +36,13 @@ from fava.ext import FavaExtensionBase, extension_endpoint
 from flask import redirect, request, url_for
 from werkzeug.wrappers import Response
 
-from finance.inbox import Account, Inbox, InboxError
+# Row и describe лежат в finance/inbox.py, а не здесь: тот же пересказ нужен
+# боту в Telegram, а тащить ради него fava с flask в чат незачем. Отсюда они
+# по-прежнему видны — и шаблону, и тестам.
+from finance.inbox import Account, Inbox, InboxError, Row, describe, plain_name
 
 #: Значение выпадающего списка «разобраться по содержимому файла».
 AUTO = ""
-
-
-@dataclass(frozen=True)
-class Row:
-    """Один файл в inbox глазами страницы."""
-
-    name: str
-    #: Счёт, которому файл достанется. Пусто — счёт не определён.
-    account: str = ""
-    #: Из чего выбирать, если счёт не определён.
-    choices: list[str] = field(default_factory=list)
-    #: Что не так, если не так.
-    problem: str = ""
-
-    @property
-    def settled(self) -> bool:
-        return bool(self.account)
 
 
 class UploadStatements(FavaExtensionBase):
@@ -120,7 +105,7 @@ class UploadStatements(FavaExtensionBase):
             return self._back(str(error))
 
         with TemporaryDirectory(prefix="fava-upload-") as tmp:
-            source = Path(tmp) / _plain_name(upload.filename)
+            source = Path(tmp) / plain_name(upload.filename)
             upload.save(source)
             if account is None and not inbox.verdict(source).settled:
                 # Счёт не выбран и по содержимому не определился. Отвергнуть
@@ -178,39 +163,3 @@ class UploadStatements(FavaExtensionBase):
     def _back(self, message: str) -> Response:
         """Вернуться на страницу и сказать, чем всё кончилось."""
         return redirect(self._page(message=message))
-
-
-def describe(inbox: Inbox, path: Path) -> Row:
-    """Пересказать вердикт раскладки словами, которые можно показать человеку.
-
-    Функцией, а не методом: это вся логика страницы, и проверять её удобнее
-    без Flask вокруг.
-    """
-    verdict = inbox.verdict(path)
-    if verdict.settled:
-        return Row(path.name, account=verdict.owners[0].name)
-    if verdict.disputed:
-        claimants = ", ".join(owner.name for owner in verdict.owners)
-        return Row(
-            path.name,
-            problem=f"забирают сразу несколько счетов ({claimants}) — "
-            "на таком падает и импорт, уберите из имени лишнюю метку",
-        )
-    if verdict.unknown:
-        return Row(
-            path.name,
-            # Не всегда беда: ACBA отдаёт по каждому счёту два файла, и один
-            # из них импортёру не нужен — он и лежит здесь неопознанным.
-            problem="ни один импортёр его не берёт — это либо не выписка, "
-            "либо лишний файл из той же выгрузки",
-        )
-    return Row(path.name, choices=[account.name for account in verdict.candidates])
-
-
-def _plain_name(filename: str) -> str:
-    """Только имя файла, без путей.
-
-    Так же поступает и штатная загрузка fava: разделители заменяются пробелом,
-    а не вырезаются, чтобы имя осталось узнаваемым.
-    """
-    return filename.replace("/", " ").replace("\\", " ").strip() or "statement"
