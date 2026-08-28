@@ -2,9 +2,6 @@
 
 from __future__ import annotations
 
-import os
-import subprocess
-import sys
 from decimal import Decimal
 from pathlib import Path
 
@@ -14,6 +11,7 @@ from beangulp import extract
 
 from finance.categorize import Rules
 from finance.importers.sber import Importer
+from tests.conftest import check_golden
 from tests.fixtures import RULES, SBER_ACCOUNT, SBER_DIR, SBER_NUMBER, SBER_NUMBER_OTHER
 from tools.make_sber_fixture import ROWS, Header, Row, build_statement, compute_totals
 
@@ -47,15 +45,7 @@ def by_text(transactions, text: str) -> data.Transaction:
 
 
 def test_golden_file_matches():
-    result = subprocess.run(  # noqa: S603
-        [sys.executable, str(ROOT / "sber_test.py"), "test", str(SBER_DIR)],
-        cwd=ROOT,
-        env={**os.environ, "PYTHONUTF8": "1"},
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-    )
-    assert result.returncode == 0, result.stdout + result.stderr
+    check_golden("sber")
 
 
 # ───────────────────────────── опознание файла ─────────────────────────────

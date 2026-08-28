@@ -2,17 +2,14 @@
 
 from __future__ import annotations
 
-import os
-import subprocess
-import sys
 from decimal import Decimal
-from pathlib import Path
 
 import pytest
 from beancount.core import data
 
 from finance.categorize import Rules
 from finance.importers.acba import AccountImporter, CardImporter
+from tests.conftest import check_golden
 from tests.fixtures import (
     ACBA_ACCOUNT_DIR,
     ACBA_ACCOUNT_NUMBER,
@@ -24,7 +21,6 @@ from tests.fixtures import (
     RULES,
 )
 
-ROOT = Path(__file__).resolve().parents[1]
 CARD_DIR = ACBA_CARD_DIR
 ACCOUNT_DIR = ACBA_ACCOUNT_DIR
 CARD = CARD_DIR / "card.xls"
@@ -49,24 +45,12 @@ def account(rules) -> AccountImporter:
     return AccountImporter("Assets:Acba:Amd", "AMD", ACCOUNT_NUMBER, rules)
 
 
-def _golden(script: str, folder: Path):
-    result = subprocess.run(  # noqa: S603
-        [sys.executable, str(ROOT / script), "test", str(folder)],
-        cwd=ROOT,
-        env={**os.environ, "PYTHONUTF8": "1"},
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-    )
-    assert result.returncode == 0, result.stdout + result.stderr
-
-
 def test_card_golden_file_matches():
-    _golden("acba_card_test.py", CARD_DIR)
+    check_golden("acba-card")
 
 
 def test_account_golden_file_matches():
-    _golden("acba_account_test.py", ACCOUNT_DIR)
+    check_golden("acba-account")
 
 
 # ───────────────────────────── опознание файла ─────────────────────────────
