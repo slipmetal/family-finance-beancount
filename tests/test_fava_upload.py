@@ -67,11 +67,17 @@ class Page:
         self.inbox = inbox
 
     def open(self) -> str:
+        """Открыть страницу и вернуть её разметку."""
         response = self.client.get(self.url)
         assert response.status_code == 200
         return response.get_data(as_text=True)
 
     def upload(self, source: Path, name: str, account: str = "") -> str:
+        """Отправить файл формой загрузки. Возвращает адрес, куда увели.
+
+        Имя передаётся отдельно от содержимого: именно оно тут и проверяется,
+        а фикстур с нужными именами под каждый случай не напасёшься.
+        """
         response = self.client.post(
             self.url + "upload",
             data={
@@ -84,6 +90,7 @@ class Page:
         return response.headers["Location"]
 
     def assign(self, name: str, account: str) -> str:
+        """Назначить счёт файлу, который уже лежит в inbox."""
         response = self.client.post(
             self.url + "assign", data={"file": name, "account": account}
         )
@@ -91,6 +98,7 @@ class Page:
         return response.headers["Location"]
 
     def names(self) -> list[str]:
+        """Что лежит в inbox — по именам: имя тут и есть предмет проверки."""
         return sorted(path.name for path in self.inbox.iterdir())
 
 
