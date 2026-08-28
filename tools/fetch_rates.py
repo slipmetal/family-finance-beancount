@@ -42,7 +42,15 @@ import requests
 from lxml import etree
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_OUTPUT = ROOT / "ledger" / "prices.beancount"
+# Скрипт запускают файлом, поэтому в sys.path попадает tools/, а не корень.
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from finance.config import LEDGER  # noqa: E402
+
+#: Путь берётся у общего конфига: при развёртывании леджер лежит на томе,
+#: и FINANCE_LEDGER — то единственное место, где это сказано.
+DEFAULT_OUTPUT = LEDGER / "prices.beancount"
 
 #: Валюты, которые встречаются в леджере. Список задан явно, а не вычисляется
 #: из проводок: лишняя пара директив `price` никому не мешает, а вот молчаливо
