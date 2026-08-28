@@ -28,6 +28,9 @@ ROOT = Path(__file__).resolve().parents[1]
 #: локально — в клоне приватного репозитория `ledger/`.
 LEDGER = Path(os.environ.get("FINANCE_LEDGER") or ROOT / "ledger")
 INBOX = Path(os.environ.get("FINANCE_INBOX") or ROOT / "inbox")
+#: Куда `import.py archive` убирает разобранные выписки. Личных данных полно,
+#: поэтому в кодовом репозитории эта папка в .gitignore, а на сервере — на томе.
+DOCUMENTS = Path(os.environ.get("FINANCE_DOCUMENTS") or ROOT / "documents")
 RULES = Path(os.environ.get("FINANCE_RULES") or LEDGER / "rules.yaml")
 ACCOUNTS = Path(os.environ.get("FINANCE_ACCOUNTS") or LEDGER / "accounts.yaml")
 

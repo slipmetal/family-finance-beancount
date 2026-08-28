@@ -34,7 +34,16 @@ from beancount.core import data
 from beancount.parser import parser, printer
 
 ROOT = Path(__file__).resolve().parents[1]
-TRANSACTIONS = ROOT / "ledger" / "transactions"
+# Скрипт запускают файлом, поэтому в sys.path попадает tools/, а не корень.
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from finance.config import LEDGER  # noqa: E402
+
+#: Куда раскладывать проводки. Путь берётся у общего конфига, а не собирается
+#: здесь: при развёртывании леджер лежит на томе, и FINANCE_LEDGER — то
+#: единственное место, где это сказано.
+TRANSACTIONS = LEDGER / "transactions"
 
 HEADER = """\
 ;; Проводки за {year} год.
