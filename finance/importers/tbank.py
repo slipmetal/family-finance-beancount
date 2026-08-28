@@ -45,6 +45,7 @@ from beangulp import extract
 
 from finance.booking import categorize
 from finance.categorize import Rules
+from finance.importers import importer_name
 
 #: Левые края колонок таблицы операций, в пунктах от края страницы.
 COLUMNS = (56, 126, 199, 294, 389, 499)
@@ -103,7 +104,7 @@ class Importer(beangulp.Importer):
     @property
     def name(self) -> str:
         """Имя обязано быть уникальным: fava отвергает конфиг с повторами."""
-        return f"tbank.{self.importer_account.rsplit(':', 1)[-1].lower()}"
+        return importer_name("tbank", self.importer_account)
 
     def identify(self, filepath: str) -> bool:
         """Опознать справку по заголовку и номеру лицевого счёта внутри файла.
